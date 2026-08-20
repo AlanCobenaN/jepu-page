@@ -909,49 +909,35 @@ ${content.substring(0, 14000)}
 === REGLA CRITICA PREVIA ===
 Los titulos, subtitulos y encabezados como "Introduccion", "Capitulo", "Conclusion", nombres de secciones o libros NO son contenido evaluable. ELIMINALOS completamente antes de procesar el texto. NUNCA pueden aparecer dentro de una pregunta ni en las opciones.
 
-=== PROCESO OBLIGATORIO DE GENERACION EN 3 PASOS ===
+=== INSTRUCCION CENTRAL DE GENERACION ===
 
-NO conviertas directamente las frases del texto en preguntas mediante sustitucion de palabras. Primero debes identificar:
+IMPORTANTE: NO generes preguntas transformando literalmente una frase del texto.
 
-Para cada oracion util del texto, aplica estos 3 pasos SIN EXCEPCION:
+Para cada pregunta debes realizar primero este analisis interno:
 
-**Paso 1 — IDENTIFICAR:**
-- Entidad: de quien o de que se habla.
-- Propiedad o informacion: que se dice sobre esa entidad.
-- Relacion: origen, composicion, caracteristica, funcion, fecha, ubicacion, etc.
+1. Identifica el sujeto o entidad principal.
+2. Identifica que informacion proporciona el texto sobre ese sujeto.
+3. Determina que tipo de informacion es: origen, caracteristica, funcion, ubicacion, composicion, fecha, cantidad, etc.
+4. Formula una pregunta natural que solicite exactamente esa informacion.
 
-**Paso 2 — FORMULAR:**
-Formula una pregunta natural que solicite exactamente esa informacion. NO copies estructuras gramaticales incompletas del texto. La pregunta debe ser redactada desde cero.
-
-**Paso 3 — VALIDAR:**
-Comprueba que la pregunta pueda entenderse SIN el texto original y que la respuesta correcta responda DIRECTAMENTE a ella.
-
-EJEMPLO DEL PROCESO:
-Texto: "Su atmosfera esta dominada por hidrogeno y helio..."
-
-Paso 1 — Entidad: Jupiter. Propiedad: composicion de su atmosfera. Relacion: composicion.
-Paso 2 — Pregunta: "¿Como es la atmosfera de Jupiter segun el texto?"
-Paso 3 — Se entiende sola? SI. La respuesta responde a la pregunta? SI. → VALIDA.
-
-NUNCA produzcas: "¿Que es su atmosfera?"
+EJEMPLO 1:
+Texto: "El cafe tiene su origen en la region de Etiopia..."
+❌ Incorrecto: "¿Que tiene/contiene origenes el cafe?"
+✅ Correcto: "¿Cual es el origen del cafe segun el texto?"
 
 EJEMPLO 2:
-Texto: "El cafe tiene su origen en la region de Etiopia..."
-Paso 1 — Entidad: cafe. Propiedad: origen. Relacion: origen.
-Paso 2 — Pregunta: "¿Cual es el origen del cafe segun el texto?"
-❌ ¿Que tiene/contiene origenes el cafe?
-✅ ¿Cual es el origen del cafe segun el texto?
+Texto: "Aunque la historia es probablemente apocrifa..."
+❌ Incorrecto: "¿Que es aunque la historia?"
+✅ Correcto: "¿Como se considera la historia de Kaldi segun el texto?"
 
 EJEMPLO 3:
-Texto: "Aunque la historia es probablemente apocrifa, refleja el papel central que Etiopia ocupa..."
-Paso 1 — Entidad: historia de Kaldi. Propiedad: como se considera. Relacion: caracteristica.
-Paso 2 — Pregunta: "¿Como se considera la historia de Kaldi segun el texto?"
-❌ ¿Que es aunque la historia?
-✅ ¿Como se considera la historia de Kaldi segun el texto?
+Texto: "Brasil se convirtio en el mayor productor mundial..."
+❌ Incorrecto: "¿Que tiene/contiene Brasil se convirtio...?"
+✅ Correcto: "¿Que posicion ocupa Brasil en la produccion mundial de cafe?"
+
+No utilices "¿Que es...?" ni "¿Que tiene/contiene...?" como plantillas predeterminadas. Elige la estructura interrogativa que corresponda al contenido.
 
 === GUIA DE ESTRUCTURAS INTERROGATIVAS ===
-
-No utilices "¿Que es...?" como plantilla universal. Elige la estructura interrogativa adecuada segun la informacion:
 
 - ¿Cual es...? → origen, ubicacion, fecha, clasificacion
 - ¿Como es...? → caracteristicas, composicion, proceso
@@ -964,6 +950,12 @@ No utilices "¿Que es...?" como plantilla universal. Elige la estructura interro
 - ¿Cuando...? → fecha, epoca
 - ¿Donde...? → ubicacion
 - ¿Cuantos/cuantas...? → cantidad
+
+=== VALIDACION ANTES DE MOSTRAR ===
+
+Antes de mostrar cada pregunta, verifica que tenga sentido gramatical, que identifique claramente su sujeto y que la respuesta correcta responda directamente a la pregunta. Si no cumple las tres condiciones, descartala y genera otra DESDE CERO.
+
+La clave es "genera otra desde cero". NO intentes parchear la estructura de la oracion original.
 
 === REGLAS CRITICAS ===
 
