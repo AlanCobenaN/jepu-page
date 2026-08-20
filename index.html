@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EstudiaFacil - Cosmetologia</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #7c3aed;
+            --primary-light: #a78bfa;
+            --primary-dark: #5b21b6;
+            --bg: #faf5ff;
+            --card: #ffffff;
+            --text: #1e1b4b;
+            --text-light: #6b7280;
+            --border: #e5e7eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --shadow: 0 4px 24px rgba(124, 58, 237, 0.1);
+            --shadow-lg: 0 8px 40px rgba(124, 58, 237, 0.15);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h1 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        header .subtitle {
+            font-size: 0.75rem;
+            opacity: 0.85;
+        }
+
+        .config-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .config-btn:hover { background: rgba(255,255,255,0.3); }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--primary-light);
+            border-radius: 16px;
+            padding: 3rem 2rem;
+            text-align: center;
+            background: var(--card);
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 1rem;
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--primary);
+            background: #f3f0ff;
+            transform: scale(1.01);
+        }
+
+        .upload-zone .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .upload-zone h3 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-zone p {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .upload-zone input { display: none; }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            background: var(--card);
+            padding: 0.4rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-light);
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+        }
+
+        .tab:hover:not(.active) { background: #f3f0ff; }
+
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        .pdf-viewer {
+            background: var(--card);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .pdf-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: #f9fafb;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .pdf-controls button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .pdf-controls button:hover { background: var(--primary-dark); }
+        .pdf-controls button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .pdf-controls .page-info {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .pdf-controls .page-jump {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .pdf-controls .page-jump input {
+            width: 50px;
+            padding: 0.4rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        #pdf-container {
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        #pdf-container canvas {
+            max-width: 100%;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            border-radius: 4px;
+        }
+
+        .text-overlay {
+            position: relative;
+        }
+
+        #extracted-text {
+            padding: 1rem;
+            max-height: 50vh;
+            overflow-y: auto;
+            line-height: 1.8;
+            font-size: 0.95rem;
+            user-select: text;
+            cursor: text;
+        }
+
+        #extracted-text h2, #extracted-text h3 {
+            color: var(--primary);
+            margin: 1rem 0 0.5rem;
+        }
+
+        #extracted-text p {
+            margin-bottom: 0.75rem;
+            padding: 0.4rem;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        #extracted-text p:hover { background: #f3f0ff; }
+
+        .voice-controls {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1rem;
+            background: #f9fafb;
+            border-top: 1px solid var(--border);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .voice-btn {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .voice-btn:hover { filter: brightness(1.1); }
+        .voice-btn.stop { background: var(--danger); }
+        .voice-btn.pause { background: var(--warning); }
+
+        .voice-settings {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: auto;
+            flex-wrap: wrap;
+        }
+
+        .voice-settings label {
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        .voice-settings select, .voice-settings input[type="range"] {
+            font-size: 0.8rem;
+            padding: 0.3rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+
+        .quiz-section {
+            background: var(--card);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+        }
+
+        .quiz-config {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+
+        .quiz-config .field {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .quiz-config label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-bottom: 0.3rem;
+            font-weight: 600;
+        }
+
+        .quiz-config input, .quiz-config select {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .quiz-config input:focus, .quiz-config select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .generate-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+        .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .quiz-area {
+            margin-top: 1rem;
+        }
+
+        .question-card {
+            background: #f9fafb;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            transition: all 0.2s;
+        }
+
+        .question-card:hover { border-color: var(--primary-light); }
+
+        .question-card .q-number {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-right: 0.5rem;
+        }
+
+        .question-card .q-text {
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            display: inline;
+        }
+
+        .question-card .options {
+            margin-top: 0.75rem;
+        }
+
+        .question-card .option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 0.8rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 0.4rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .question-card .option:hover { background: #f3f0ff; border-color: var(--primary-light); }
+        .question-card .option.selected { background: #ede9fe; border-color: var(--primary); }
+        .question-card .option.correct { background: #d1fae5; border-color: var(--success); color: #065f46; }
+        .question-card .option.incorrect { background: #fee2e2; border-color: var(--danger); color: #991b1b; }
+
+        .question-card .option input { display: none; }
+
+        .question-card .explanation {
+            margin-top: 0.75rem;
+            padding: 0.75rem;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            display: none;
+        }
+
+        .question-card .explanation.show { display: block; }
+
+        .question-card .listen-btn {
+            background: none;
+            border: 1px solid var(--primary-light);
+            color: var(--primary);
+            padding: 0.3rem 0.6rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .question-card .listen-btn:hover { background: #f3f0ff; }
+
+        .quiz-results {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, #f3f0ff, #ede9fe);
+            border-radius: 12px;
+            margin-top: 1rem;
+        }
+
+        .quiz-results .score {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .quiz-results .score-label {
+            font-size: 1rem;
+            color: var(--text-light);
+        }
+
+        .check-btn {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 0.7rem 2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1rem;
+            margin-top: 1rem;
+            transition: all 0.2s;
+        }
+
+        .check-btn:hover { filter: brightness(1.1); }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loading.show { display: block; }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-overlay.show { display: flex; }
+
+        .modal {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 450px;
+            width: 100%;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal h3 {
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .modal input {
+            width: 100%;
+            padding: 0.7rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .modal .btn-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            justify-content: flex-end;
+        }
+
+        .modal .btn-row button {
+            padding: 0.5rem 1.2rem;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .modal .btn-row .save-btn {
+            background: var(--primary);
+            color: white;
+        }
+
+        .modal .btn-row .cancel-btn {
+            background: #f3f4f6;
+            color: var(--text);
+        }
+
+        .hidden { display: none !important; }
+
+        .notification {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--text);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            z-index: 300;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .notification.show { opacity: 1; }
+
+        .api-status {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .api-status.connected { background: #d1fae5; color: #065f46; }
+        .api-status.disconnected { background: #fee2e2; color: #991b1b; }
+
+        @media (max-width: 640px) {
+            header h1 { font-size: 1.1rem; }
+            .tabs { flex-direction: column; }
+            .tab { font-size: 0.85rem; padding: 0.6rem; }
+            .pdf-controls { flex-direction: column; align-items: stretch; }
+            .quiz-config { flex-direction: column; }
+            .quiz-config .field { min-width: 100%; }
+            .voice-controls { flex-direction: column; }
+            .voice-settings { margin-left: 0; justify-content: space-between; }
+            .container { padding: 0.5rem; }
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <h1>EstudiaFacil</h1>
+            <span class="subtitle">Tu asistente de estudio</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+            <span id="api-status" class="api-status disconnected">Sin API</span>
+            <button class="config-btn" onclick="openConfig()">API Key</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+            <div class="icon">&#128211;</div>
+            <h3>Sube tu PDF de estudio</h3>
+            <p>Arrastra un archivo aqui o haz clic para seleccionar</p>
+            <input type="file" id="file-input" accept=".pdf">
+        </div>
+
+        <div class="tabs hidden" id="main-tabs">
+            <button class="tab active" data-tab="reader" onclick="switchTab('reader')">Lector de Voz</button>
+            <button class="tab" data-tab="quiz" onclick="switchTab('quiz')">Generar Preguntas</button>
+        </div>
+
+        <div class="panel active" id="panel-reader">
+            <div class="pdf-viewer">
+                <div class="pdf-controls">
+                    <button onclick="prevPage()" id="btn-prev">&#9664; Anterior</button>
+                    <div class="page-jump">
+                        <span>Pagina</span>
+                        <input type="number" id="page-input" min="1" value="1" onchange="goToPage(this.value)">
+                        <span>de <span id="total-pages">0</span></span>
+                    </div>
+                    <button onclick="nextPage()" id="btn-next">Siguiente &#9654;</button>
+                </div>
+                <div id="pdf-container"></div>
+                <div class="text-overlay">
+                    <div id="extracted-text" class="hidden"></div>
+                </div>
+                <div class="voice-controls">
+                    <button class="voice-btn" onclick="speakSelected()" id="btn-speak">&#127908; Leer seleccion</button>
+                    <button class="voice-btn pause" onclick="pauseSpeech()" id="btn-pause" disabled>&#9208; Pausar</button>
+                    <button class="voice-btn stop" onclick="stopSpeech()" id="btn-stop" disabled>&#9632; Detener</button>
+                    <div class="voice-settings">
+                        <label>Velocidad:</label>
+                        <input type="range" id="speech-rate" min="0.5" max="2" step="0.1" value="1" style="width:80px">
+                        <label>Voz:</label>
+                        <select id="voice-select"></select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel" id="panel-quiz">
+            <div class="quiz-section">
+                <div class="quiz-config">
+                    <div class="field">
+                        <label>Pagina inicio</label>
+                        <input type="number" id="quiz-start" min="1" value="1">
+                    </div>
+                    <div class="field">
+                        <label>Pagina fin</label>
+                        <input type="number" id="quiz-end" min="1" value="5">
+                    </div>
+                    <div class="field">
+                        <label>Numero de preguntas</label>
+                        <input type="number" id="quiz-count" min="1" max="20" value="5">
+                    </div>
+                    <div class="field">
+                        <label>Tipo</label>
+                        <select id="quiz-type">
+                            <option value="multiple">Multiple opcion</option>
+                            <option value="verdadero">Verdadero / Falso</option>
+                            <option value="mezcla">Mezcla</option>
+                        </select>
+                    </div>
+                    <button class="generate-btn" onclick="generateQuiz()" id="btn-generate">Generar Preguntas</button>
+                </div>
+
+                <div class="loading" id="quiz-loading">
+                    <div class="spinner"></div>
+                    <p>Analizando el PDF y generando preguntas...</p>
+                </div>
+
+                <div class="quiz-area" id="quiz-area"></div>
+
+                <div class="quiz-results" id="quiz-results">
+                    <div class="score" id="quiz-score">0/0</div>
+                    <div class="score-label">Preguntas correctas</div>
+                    <button class="check-btn" onclick="resetQuiz()">Volver a intentar</button>
+                </div>
+
+                <div class="hidden" id="check-area" style="text-align:center;margin-top:1rem;">
+                    <button class="check-btn" onclick="checkAnswers()">Verificar respuestas</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="config-modal">
+        <div class="modal">
+            <h3>Configuracion API</h3>
+            <p style="font-size:0.85rem;color:var(--text-light);margin-bottom:1rem;">
+                Ingresa tu API key de Google Gemini para generar preguntas inteligentes.
+                <br><a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--primary);">Obtener API key gratis</a>
+            </p>
+            <input type="password" id="api-key-input" placeholder="Pega tu API key aqui...">
+            <div class="btn-row">
+                <button class="cancel-btn" onclick="closeConfig()">Cancelar</button>
+                <button class="save-btn" onclick="saveConfig()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        let pdfDoc = null;
+        let currentPage = 1;
+        let totalPages = 0;
+        let allPageText = {};
+        let apiKey = localStorage.getItem('gemini_api_key') || 'AIzaSyBIHCO5RhEv6VeoOZERi3ynvvet1hEuS5A';
+        let quizQuestions = [];
+
+        const uploadZone = document.getElementById('upload-zone');
+        const fileInput = document.getElementById('file-input');
+        const pdfContainer = document.getElementById('pdf-container');
+        const extractedTextEl = document.getElementById('extracted-text');
+
+        updateApiStatus();
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) loadPDF(e.target.files[0]);
+        });
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) loadPDF(e.dataTransfer.files[0]);
+        });
+
+        async function loadPDF(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            totalPages = pdfDoc.numPages;
+            currentPage = 1;
+
+            document.getElementById('total-pages').textContent = totalPages;
+            document.getElementById('page-input').max = totalPages;
+            document.getElementById('quiz-end').max = totalPages;
+            document.getElementById('quiz-end').value = Math.min(5, totalPages);
+            document.getElementById('main-tabs').classList.remove('hidden');
+            uploadZone.innerHTML = `
+                <div class="icon">&#9989;</div>
+                <h3>${file.name}</h3>
+                <p>${totalPages} paginas listas para estudiar</p>
+            `;
+            uploadZone.style.cursor = 'default';
+            uploadZone.onclick = null;
+
+            await extractAllText();
+            renderPage(currentPage);
+            notify('PDF cargado correctamente');
+        }
+
+        async function extractAllText() {
+            allPageText = {};
+            for (let i = 1; i <= totalPages; i++) {
+                const page = await pdfDoc.getPage(i);
+                const content = await page.getTextContent();
+                let text = '';
+                let lastY = null;
+                let lastFont = null;
+
+                for (const item of content.items) {
+                    const fontName = item.fontName || '';
+                    const isBold = fontName.toLowerCase().includes('bold');
+                    const fontSize = item.transform ? Math.abs(item.transform[3]) : 12;
+
+                    if (lastY !== null && Math.abs(item.y - lastY) > 5) {
+                        text += '\n';
+                    }
+
+                    if (isBold && fontSize > 14) {
+                        text += '\n## ' + item.str + '\n';
+                    } else if (isBold) {
+                        text += '\n**' + item.str + '**';
+                    } else {
+                        text += item.str;
+                    }
+
+                    lastY = item.y;
+                    lastFont = fontName;
+                }
+
+                allPageText[i] = text.replace(/\n{3,}/g, '\n\n').trim();
+            }
+        }
+
+        async function renderPage(num) {
+            const page = await pdfDoc.getPage(num);
+            const scale = Math.min(window.innerWidth / 600, 2);
+            const viewport = page.getViewport({ scale });
+
+            pdfContainer.innerHTML = '';
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            pdfContainer.appendChild(canvas);
+
+            await page.render({ canvasContext: ctx, viewport }).promise;
+
+            document.getElementById('page-input').value = num;
+            document.getElementById('btn-prev').disabled = num <= 1;
+            document.getElementById('btn-next').disabled = num >= totalPages;
+
+            showExtractedText(num);
+        }
+
+        function showExtractedText(num) {
+            const text = allPageText[num] || 'No se pudo extraer texto de esta pagina.';
+            const formatted = text
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .split('\n')
+                .map(line => {
+                    if (line.trim() === '') return '';
+                    if (line.startsWith('<h2>')) return line;
+                    return `<p>${line.trim()}</p>`;
+                })
+                .join('');
+
+            extractedTextEl.innerHTML = formatted;
+            extractedTextEl.classList.remove('hidden');
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                renderPage(currentPage);
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                renderPage(currentPage);
+            }
+        }
+
+        function goToPage(val) {
+            const page = parseInt(val);
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                renderPage(currentPage);
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(`panel-${tab}`).classList.add('active');
+        }
+
+        // Speech
+        function speakSelected() {
+            const sel = window.getSelection().toString().trim();
+            if (!sel) {
+                const text = extractedTextEl.innerText;
+                if (text) speak(text);
+                return;
+            }
+            speak(sel);
+        }
+
+        function speak(text) {
+            stopSpeech();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'es-ES';
+            utterance.rate = parseFloat(document.getElementById('speech-rate').value);
+
+            const voiceSelect = document.getElementById('voice-select');
+            if (voiceSelect.value) {
+                utterance.voice = speechSynthesis.getVoices()[parseInt(voiceSelect.value)];
+            }
+
+            utterance.onstart = () => {
+                document.getElementById('btn-speak').disabled = true;
+                document.getElementById('btn-pause').disabled = false;
+                document.getElementById('btn-stop').disabled = false;
+            };
+            utterance.onend = () => {
+                document.getElementById('btn-speak').disabled = false;
+                document.getElementById('btn-pause').disabled = true;
+                document.getElementById('btn-stop').disabled = true;
+            };
+
+            speechSynthesis.speak(utterance);
+        }
+
+        function pauseSpeech() {
+            if (speechSynthesis.speaking) {
+                if (speechSynthesis.paused) {
+                    speechSynthesis.resume();
+                } else {
+                    speechSynthesis.pause();
+                }
+            }
+        }
+
+        function stopSpeech() {
+            speechSynthesis.cancel();
+            document.getElementById('btn-speak').disabled = false;
+            document.getElementById('btn-pause').disabled = true;
+            document.getElementById('btn-stop').disabled = true;
+        }
+
+        function loadVoices() {
+            const voices = speechSynthesis.getVoices();
+            const select = document.getElementById('voice-select');
+            select.innerHTML = '';
+            const esVoices = voices.filter(v => v.lang.startsWith('es'));
+            const allVoices = esVoices.length > 0 ? esVoices : voices;
+            allVoices.forEach((v, i) => {
+                const opt = document.createElement('option');
+                opt.value = voices.indexOf(v);
+                opt.textContent = `${v.name} (${v.lang})`;
+                select.appendChild(opt);
+            });
+        }
+
+        speechSynthesis.onvoiceschanged = loadVoices;
+        loadVoices();
+
+        // Quiz
+        async function generateQuiz() {
+            const start = parseInt(document.getElementById('quiz-start').value);
+            const end = parseInt(document.getElementById('quiz-end').value);
+            const count = parseInt(document.getElementById('quiz-count').value);
+            const type = document.getElementById('quiz-type').value;
+
+            if (start < 1 || end > totalPages || start > end) {
+                notify('Rango de paginas invalido');
+                return;
+            }
+
+            let content = '';
+            for (let i = start; i <= end; i++) {
+                content += `\n--- Pagina ${i} ---\n${allPageText[i] || ''}`;
+            }
+
+            if (!content.trim()) {
+                notify('No hay texto en las paginas seleccionadas');
+                return;
+            }
+
+            if (!apiKey) {
+                generateOfflineQuiz(content, count, type);
+                return;
+            }
+
+            document.getElementById('quiz-loading').classList.add('show');
+            document.getElementById('quiz-area').innerHTML = '';
+            document.getElementById('quiz-results').style.display = 'none';
+            document.getElementById('check-area').classList.add('hidden');
+
+            try {
+                let typeInstruction = '';
+                if (type === 'multiple') {
+                    typeInstruction = 'Cada pregunta debe tener 4 opciones de respuesta (A, B, C, D) y solo una debe ser correcta.';
+                } else if (type === 'verdadero') {
+                    typeInstruction = 'Cada pregunta debe ser de Verdadero o Falso con una sola opcion correcta.';
+                } else {
+                    typeInstruction = 'Cada pregunta debe ser una mezcla: algunas de multiple opcion (4 opciones) y algunas de Verdadero/Falso.';
+                }
+
+                const prompt = `Eres un profesor experto en cosmetologia. Basado en el siguiente texto de un libro de estudio, genera EXACTAMENTE ${count} preguntas para evaluar el conocimiento del estudiante.
+
+TEXTO DEL LIBRO:
+${content.substring(0, 8000)}
+
+INSTRUCCIONES:
+- ${typeInstruction}
+- Las preguntas deben ser variadas y cubrir diferentes temas del texto.
+- Cada pregunta debe tener una explicacion breve de por que la respuesta es correcta.
+- Responde SOLO con JSON valido, sin markdown ni texto adicional.
+
+Formato JSON estricto:
+{
+  "questions": [
+    {
+      "question": "texto de la pregunta",
+      "options": ["opcion A", "opcion B", "opcion C", "opcion D"],
+      "correct": 0,
+      "explanation": "explicacion breve"
+    }
+  ]
+}`;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { temperature: 0.7, maxOutputTokens: 4096 }
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error?.message || 'Error en la API');
+
+                const text = data.candidates[0].content.parts[0].text;
+                const jsonMatch = text.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) throw new Error('No se pudo parsear la respuesta');
+
+                const parsed = JSON.parse(jsonMatch[0]);
+                quizQuestions = parsed.questions;
+                renderQuiz();
+                notify('Preguntas generadas con Gemini');
+
+            } catch (err) {
+                console.error(err);
+                notify('Error con Gemini. Usando modo offline...');
+                generateOfflineQuiz(content, count, type);
+            } finally {
+                document.getElementById('quiz-loading').classList.remove('show');
+            }
+        }
+
+        function generateOfflineQuiz(content, count, type) {
+            const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 20);
+            quizQuestions = [];
+
+            for (let i = 0; i < Math.min(count, sentences.length); i++) {
+                const sentence = sentences[i].trim();
+                const words = sentence.split(/\s+/);
+
+                if (type === 'verdadero' || (type === 'mezcla' && Math.random() > 0.5)) {
+                    const isTrue = Math.random() > 0.5;
+                    let statement = sentence;
+                    if (!isTrue && words.length > 3) {
+                        const idx = Math.floor(Math.random() * words.length);
+                        const opposites = { 'grande': 'pequeño', 'caliente': 'frío', 'básico': 'complejo', 'superior': 'inferior' };
+                        for (const [k, v] of Object.entries(opposites)) {
+                            if (statement.toLowerCase().includes(k)) {
+                                statement = statement.replace(new RegExp(k, 'i'), v);
+                                break;
+                            }
+                        }
+                    }
+                    quizQuestions.push({
+                        question: statement + (isTrue ? '' : ''),
+                        options: ['Verdadero', 'Falso'],
+                        correct: isTrue ? 0 : 1,
+                        explanation: isTrue
+                            ? 'Esta afirmacion es correcta segun el texto.'
+                            : 'Esta afirmacion es incorrecta segun el texto.'
+                    });
+                } else {
+                    const correctAnswer = words.slice(0, Math.min(4, words.length)).join(' ');
+                    const options = [correctAnswer];
+
+                    while (options.length < 4 && sentences.length > i + options.length) {
+                        const otherSentence = sentences[i + options.length];
+                        const otherWords = otherSentence.split(/\s+/);
+                        const otherAnswer = otherWords.slice(0, Math.min(4, otherWords.length)).join(' ');
+                        if (!options.includes(otherAnswer)) options.push(otherAnswer);
+                    }
+
+                    while (options.length < 4) {
+                        options.push('Respuesta no especificada ' + options.length);
+                    }
+
+                    const shuffled = options.sort(() => Math.random() - 0.5);
+                    const correctIdx = shuffled.indexOf(correctAnswer);
+
+                    quizQuestions.push({
+                        question: 'Segun el texto: "' + sentence.substring(0, 80) + '..."',
+                        options: shuffled,
+                        correct: correctIdx,
+                        explanation: 'Esta informacion se encuentra directamente en el texto analizado.'
+                    });
+                }
+            }
+
+            renderQuiz();
+            notify('Preguntas generadas en modo offline');
+        }
+
+        function renderQuiz() {
+            const area = document.getElementById('quiz-area');
+            area.innerHTML = '';
+
+            quizQuestions.forEach((q, i) => {
+                const card = document.createElement('div');
+                card.className = 'question-card';
+                card.innerHTML = `
+                    <span class="q-number">${i + 1}</span>
+                    <span class="q-text">${q.question}</span>
+                    <button class="listen-btn" onclick="speak('${q.question.replace(/'/g, "\\'")}')">&#127908;</button>
+                    <div class="options">
+                        ${q.options.map((opt, j) => `
+                            <div class="option" data-q="${i}" data-opt="${j}" onclick="selectOption(this, ${i}, ${j})">
+                                <input type="radio" name="q${i}" id="q${i}o${j}">
+                                <span><strong>${String.fromCharCode(65 + j)}.</strong> ${opt}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="explanation" id="exp-${i}">${q.explanation}</div>
+                `;
+                area.appendChild(card);
+            });
+
+            document.getElementById('check-area').classList.remove('hidden');
+        }
+
+        function selectOption(el, qIdx, optIdx) {
+            document.querySelectorAll(`[data-q="${qIdx}"]`).forEach(o => o.classList.remove('selected'));
+            el.classList.add('selected');
+            el.querySelector('input').checked = true;
+        }
+
+        function checkAnswers() {
+            let correct = 0;
+            quizQuestions.forEach((q, i) => {
+                const options = document.querySelectorAll(`[data-q="${i}"]`);
+                const selected = document.querySelector(`input[name="q${i}"]:checked`);
+
+                options.forEach((opt, j) => {
+                    opt.classList.remove('selected', 'correct', 'incorrect');
+                    opt.style.pointerEvents = 'none';
+
+                    if (j === q.correct) {
+                        opt.classList.add('correct');
+                    }
+                    if (selected && parseInt(opt.dataset.opt) === parseInt(selected.value) && j !== q.correct) {
+                        opt.classList.add('incorrect');
+                    }
+                });
+
+                if (selected && parseInt(selected.value) === q.correct) correct++;
+                document.getElementById(`exp-${i}`).classList.add('show');
+            });
+
+            document.getElementById('quiz-score').textContent = `${correct}/${quizQuestions.length}`;
+            document.getElementById('quiz-results').style.display = 'block';
+            document.getElementById('check-area').classList.add('hidden');
+        }
+
+        function resetQuiz() {
+            document.getElementById('quiz-area').innerHTML = '';
+            document.getElementById('quiz-results').style.display = 'none';
+            document.getElementById('check-area').classList.add('hidden');
+            quizQuestions = [];
+        }
+
+        // Config
+        function openConfig() {
+            document.getElementById('api-key-input').value = apiKey;
+            document.getElementById('config-modal').classList.add('show');
+        }
+
+        function closeConfig() {
+            document.getElementById('config-modal').classList.remove('show');
+        }
+
+        function saveConfig() {
+            apiKey = document.getElementById('api-key-input').value.trim();
+            localStorage.setItem('gemini_api_key', apiKey);
+            updateApiStatus();
+            closeConfig();
+            notify(apiKey ? 'API key guardada' : 'API key eliminada');
+        }
+
+        function updateApiStatus() {
+            const el = document.getElementById('api-status');
+            if (apiKey) {
+                el.textContent = 'Gemini OK';
+                el.className = 'api-status connected';
+            } else {
+                el.textContent = 'Modo offline';
+                el.className = 'api-status disconnected';
+            }
+        }
+
+        function notify(msg) {
+            const el = document.getElementById('notification');
+            el.textContent = msg;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 3000);
+        }
+    </script>
+</body>
+</html>
