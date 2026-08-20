@@ -878,6 +878,9 @@
 === TEXTO DEL LIBRO ===
 ${content.substring(0, 14000)}
 
+=== PRE-PROCESAMIENTO OBLIGATORIO ===
+Los titulos y encabezados NO son contenido evaluable. ANTES de generar CUALQUIER pregunta, elimina completamente del texto palabras como "Introduccion", "Capitulo", "Conclusion", nombres de secciones y subtitulos. NUNCA pueden aparecer dentro de una pregunta ni en las opciones.
+
 === REGLAS OBLIGATORIAS PARA GENERAR LAS PREGUNTAS ===
 
 REGLA FUNDAMENTAL: No conviertas directamente una oracion del texto en una pregunta. Primero analiza semanticamente la informacion y determina que concepto se quiere evaluar.
@@ -917,6 +920,11 @@ REGLAS ESPECIFICAS:
 - La respuesta correcta debe ser una FRASE COMPLETA, nunca un fragmento cortado con "...".
 - Los distractores deben tener la MISMA ESTRUCTURA que la respuesta correcta.
 - NUNCA uses como opciones: titulos del documento, encabezados de seccion, nombres del libro.
+- La pregunta debe construirse a partir del TIPO DE INFORMACION de la respuesta correcta. Si la respuesta describe una caracteristica de rotacion, pregunta por la rotacion. Si describe la composicion de una atmosfera, pregunta por la atmosfera. Si describe una ubicacion, pregunta por la ubicacion. No utilices preguntas genericas como "¿Que tiene/contiene X?" salvo que la respuesta realmente indique que contiene X.
+  - MAL: "¿Que tiene Urano?" si la respuesta es "Su eje esta inclinado 98 grados"
+  - MAL: "¿Que tiene la atmosfera?" si la respuesta es "capas de gases como nitrogeno y oxigeno"
+  - BIEN: "¿Cual es la inclinacion del eje de Urano?"
+  - BIEN: "¿De que gases esta compuesta la atmosfera terrestre?"
 
 Para V/F: La afirmacion debe ser completa, independiente y comprensible sola. Incluye siempre el sujeto y contexto necesario.
 ❌ "Esta formado por roca y metal."
@@ -934,6 +942,8 @@ Antes de incluir cada pregunta en el JSON, validala internamente con estas 3 pre
 3. "¿La pregunta tiene sujeto, verbo y estructura gramatical correcta?"
 
 Si alguna respuesta es NO, regenera la pregunta antes de mostrarla. Si no puedes regenerarla, descartala y genera otra basada en un fragmento diferente del texto.
+
+VALIDACION FINAL POR PREGUNTA: Despues de generar cada pregunta, compara la pregunta con la respuesta correcta. Si la respuesta no puede responderse DIRECTAMENTE con la informacion que contiene la pregunta, DESCARTA la pregunta y genera otra. La pregunta debe ser lo suficientemente especifica para que la respuesta correcta sea la unica que encaje.
 
 DEVUELVE SOLO EL JSON FINAL:
 {"questions":[${example}]}
