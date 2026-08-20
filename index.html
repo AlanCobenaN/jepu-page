@@ -950,6 +950,22 @@ ${typeLine}
 
 Cada explicacion debe citar que parte del texto respalda la respuesta.
 
+=== FILTRO FINAL OBLIGATORIO ===
+
+Antes de mostrar una pregunta, realiza una validacion automatica.
+
+Una pregunta es INVALIDA si:
+- Contiene palabras de encabezado como "Introduccion", "Conclusion" o titulos de secciones;
+- Contiene estructuras como "¿Que es se...?", "¿Que es su...?", "¿Que se menciona sobre es...?";
+- Utiliza "su", "estos", "estos objetos", "ellos", etc. sin identificar claramente el referente;
+- Pregunta "¿Que tiene/contiene X?" cuando la respuesta describe una caracteristica, comportamiento, composicion o propiedad de X;
+- La respuesta correcta no responde directamente a la pregunta;
+- Modifica cualquier dato del texto original.
+
+Si una pregunta es invalida, NO LA MUESTRES. Regenerala desde cero utilizando otra formulacion o, si es necesario, otra oracion del texto.
+
+Nunca intentes reparar una pregunta invalida simplemente anadiendo o eliminando palabras. Vuelve a identificar el sujeto y la informacion principal y genera una pregunta nueva.
+
 DEVUELVE SOLO EL JSON FINAL:
 {"questions":[${example}]}
 
