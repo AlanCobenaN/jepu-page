@@ -906,8 +906,8 @@
 === TEXTO DEL LIBRO ===
 ${content.substring(0, 14000)}
 
-=== REGLA CRITICA PREVIA ===
-Los titulos, subtitulos y encabezados como "Introduccion", "Capitulo", "Conclusion", nombres de secciones o libros NO son contenido evaluable. ELIMINALOS completamente antes de procesar el texto. NUNCA pueden aparecer dentro de una pregunta ni en las opciones.
+=== REGLA CRITICA PREVIA: ELIMINACION DE ENCABEZADOS ===
+Los encabezados son metadatos y NO forman parte del texto evaluable. Antes de generar preguntas, elimina todos los titulos, subtitulos y encabezados. Ejemplos de lo que debes eliminar: "Introduccion", "Origenes", "Historia y Cultura del Cafe", "Capitulo", "Conclusion", "Los Gigantes Gaseosos", etc. Nunca incluyas un encabezado dentro de una pregunta o afirmacion. Si ves un titulo seguido de contenido, usa SOLO el contenido y descarta el titulo.
 
 === INSTRUCCION CENTRAL DE GENERACION ===
 
@@ -936,6 +936,14 @@ Texto: "Brasil se convirtio en el mayor productor mundial..."
 ✅ Correcto: "¿Que posicion ocupa Brasil en la produccion mundial de cafe?"
 
 No utilices "¿Que es...?" ni "¿Que tiene/contiene...?" como plantillas predeterminadas. Elige la estructura interrogativa que corresponda al contenido.
+
+RESTRICCION ESPECIFICA: NO utilices "¿Que tiene/contiene X?" como plantilla general. Solo puedes utilizar "¿Que contiene...?" cuando el texto literalmente describe elementos contenidos dentro de algo. Para informacion como origen, posicion, historia, caracteristicas o funcion, utiliza una estructura adecuada.
+- ❌ "¿Que tiene/contiene Brasil se convirtio...?"
+- ✅ "¿Que posicion ocupa Brasil en la produccion mundial de cafe?"
+- ❌ "¿Que tiene/contiene origenes el cafe?"
+- ✅ "¿Cual es el origen del cafe?"
+- ❌ "¿Que tiene/contiene Urano?"
+- ✅ "¿Que particularidad tiene Urano respecto a su rotacion?"
 
 === GUIA DE ESTRUCTURAS INTERROGATIVAS ===
 
