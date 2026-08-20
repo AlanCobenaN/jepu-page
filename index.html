@@ -1045,21 +1045,17 @@ ${typeLine}
 
 Cada explicacion debe citar que parte del texto respalda la respuesta.
 
-=== FILTRO FINAL OBLIGATORIO ===
+=== VALIDACION OBLIGATORIA ANTES DE MOSTRAR CADA PREGUNTA ===
 
-Antes de mostrar una pregunta, realiza una validacion automatica.
+Antes de incluir una pregunta en el resultado, comprueba si la pregunta puede leerse de forma independiente y si tiene sentido gramatical completo. Si contiene fragmentos incompletos como "aunque la historia", "posicion que", "origenes el cafe", "estos objetos" o cualquier encabezado, la pregunta debe descartarse y sustituirse por otra.
 
-Una pregunta es INVALIDA si:
-- Contiene palabras de encabezado como "Introduccion", "Conclusion" o titulos de secciones;
-- Contiene estructuras como "¿Que es se...?", "¿Que es su...?", "¿Que se menciona sobre es...?";
-- Utiliza "su", "estos", "estos objetos", "ellos", etc. sin identificar claramente el referente;
-- Pregunta "¿Que tiene/contiene X?" cuando la respuesta describe una caracteristica, comportamiento, composicion o propiedad de X;
-- La respuesta correcta no responde directamente a la pregunta;
-- Modifica cualquier dato del texto original.
+Esta prohibido convertir automaticamente el inicio de una oracion en "¿Que es...?" o "¿Que tiene/contiene...?". Identifica primero el sujeto, verbo y contexto completo de la informacion antes de formular la pregunta.
 
-Si una pregunta es invalida, NO LA MUESTRES. Regenerala desde cero utilizando otra formulacion o, si es necesario, otra oracion del texto.
+Nunca uses titulos o encabezados como parte de una pregunta o afirmacion. Palabras como "Origenes", "Introduccion" o "Historia y Cultura del Cafe" deben eliminarse antes de generar las preguntas.
 
-Nunca intentes reparar una pregunta invalida simplemente anadiendo o eliminando palabras. Vuelve a identificar el sujeto y la informacion principal y genera una pregunta nueva.
+Si una frase depende de una oracion anterior para tener sentido, no generes una pregunta directamente a partir de ella. Reformulala con contexto suficiente o descartala.
+
+Si una pregunta es invalida, NO LA MUESTRES. Regenerala desde cero identificando el sujeto y la informacion principal. NO intentes repararla anadiendo o eliminando palabras.
 
 DEVUELVE SOLO EL JSON FINAL:
 {"questions":[${example}]}
