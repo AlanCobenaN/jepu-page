@@ -863,94 +863,79 @@
         function buildGeminiPrompt(content, count, type) {
             let typeLine, example;
             if (type === 'multiple') {
-                typeLine = 'TODAS las preguntas deben ser de multiple opcion con 4 alternativas (A, B, C, D). Solo una correcta.';
-                example = `{"question":"¿Qué concentra el Sol según el texto?","options":["Más del 99% de la masa total del Sistema Solar","Todos los planetas terrestres","La mayor parte de los asteroides","La totalidad de las lunas del Sistema Solar"],"correct":0,"explanation":"El texto indica que el Sol concentra más del 99% de la masa total del sistema."}`;
+                typeLine = 'FORMATO: Todas las preguntas deben ser de multiple opcion con 4 alternativas (A, B, C, D). Solo una correcta. Campo "correct" es el indice (0-3) de la respuesta correcta.';
+                example = `{"question":"¿Qué factores han permitido el desarrollo de ecosistemas complejos en la Tierra?","options":["Su distancia al Sol, agua líquida, atmósfera protectora y campo magnético","Su tamaño, su color y su temperatura media","La presencia de lunas, asteroides y cometas cercanos","Su posición en la Vía Láctea y su edad aproximada"],"correct":0,"explanation":"El texto menciona que la distancia al Sol, el agua líquida, una atmósfera protectora y un campo magnético estable son los factores que lo han permitido."}`;
             } else if (type === 'verdadero') {
-                typeLine = 'TODAS deben ser Verdadero/Falso. Opciones: ["Verdadero", "Falso"]. correct: 0 para V, 1 para F.';
-                example = `{"question":"El Sistema Solar tiene ocho planetas que orbitan al Sol.","options":["Verdadero","Falso"],"correct":0,"explanation":"El texto menciona que el Sistema Solar tiene ocho planetas."}`;
+                typeLine = 'FORMATO: Todas las preguntas deben ser de Verdadero/Falso. Opciones: ["Verdadero", "Falso"]. correct: 0 para V, 1 para F.';
+                example = `{"question":"Los planetas rocosos del Sistema Solar están formados por roca y metal.","options":["Verdadero","Falso"],"correct":0,"explanation":"El texto indica que los cuatro planetas más cercanos al Sol son rocosos y están formados por roca y metal."}`;
             } else {
-                typeLine = 'MEZCLA: mitad multiple (4 alternativas), mitad Verdadero/Falso.';
-                example = `{"question":"¿Qué concentra el Sol?","options":["Más del 99% de la masa del Sistema Solar","Todos los planetas rocosos","La mitad de la masa total","Todos los asteroides"],"correct":0,"explanation":"El Sol concentra más del 99% de la masa total."}`;
+                typeLine = 'FORMATO: MEZCLA. La mitad aproximadamente como multiple opcion (4 alternativas) y la mitad como Verdadero/Falso.';
+                example = `{"question":"¿Qué tipo de estrella es el Sol?","options":["Una estrella enana amarilla de tipo G2V","Una estrella gigante roja de tipo M","Una enana blanca de tipo D","Una supergigante azul de tipo O"],"correct":0,"explanation":"El texto clasifica al Sol como una estrella de tipo espectral G2V, comunmente conocida como enana amarilla."}`;
             }
 
-            return `Eres un profesor universitario experto. Tu tarea tiene DOS FASES: generar preguntas y luego REVISARLAS antes de entregarlas.
+            return `Eres un profesor universitario experto. Tu tarea es generar ${count} preguntas de examen de alta calidad basadas en el texto proporcionado. Luego debes VALIDAR cada pregunta antes de entregarla.
 
-FASE 1 - GENERAR ${count} PREGUNTAS basadas en el siguiente texto:
-
-TEXTO:
+=== TEXTO DEL LIBRO ===
 ${content.substring(0, 14000)}
 
-REGLAS DE GENERACION:
+=== REGLAS OBLIGATORIAS PARA GENERAR LAS PREGUNTAS ===
 
-1. NO construyas la pregunta modificando directamente la oracion original. Primero identifica el SUJETO, el OBJETO y la INFORMACION PRINCIPAL de la oracion. Despues genera una pregunta NUEVA y gramatical basada en esa informacion. La pregunta debe poder entenderse por si sola.
-   - MAL: "¿Qué es se cree que la formó hace aproximadamente 4.600 millones de años?"
-   - MAL: "¿Qué se menciona sobre es una estrella de tipo espectral G2V?"
-   - BIEN: "¿Cuándo se formó el Sistema Solar?"
-   - BIEN: "¿Qué tipo de estrella es el Sol?"
-   - NUNCA conserves estructuras incompletas como "¿Qué es se cree...?" o "¿Qué se menciona sobre es...?"
+REGLA FUNDAMENTAL: No conviertas directamente una oracion del texto en una pregunta. Primero analiza semanticamente la informacion y determina que concepto se quiere evaluar.
 
-2. ELIMINA siempre encabezados como "Introduccion", "Los Gigantes Gaseosos y de Hielo", "Capitulo", "Conclusion" antes de generar la pregunta. Los titulos y encabezados NUNCA deben formar parte de una pregunta ni de sus opciones.
+Para cada pregunta debes identificar:
+- Sujeto o entidad: de quien o de que se esta hablando.
+- Informacion principal: que caracteristica, dato, accion, ubicacion o relacion se describe.
+- Tipo de pregunta: que, cual, como, donde, verdadero/falso, etc.
+- Respuesta correcta: debe responder directamente a la pregunta.
 
-3. Si la oracion utiliza pronombres o referencias sin contexto como "su", "estos", "esta", "ellos" o "aquellos", REEMPLAZALOS por el nombre del sujeto correspondiente para que la pregunta pueda entenderse por si sola. NUNCA utilices pronombres como "su", "estos", "estos objetos" sin especificar claramente a que entidad se refieren.
-   - MAL: "¿Qué tiene su atmósfera?"
-   - BIEN: "¿Qué tiene la atmósfera de la Tierra?"
-   - MAL: "¿Cómo se formaron estos?"
-   - BIEN: "¿Cómo se formaron los planetas rocosos?"
-   - Si NO puedes determinar con claridad que entidad describe el fragmento, NO generes una pregunta con pronombres. Identifica la entidad explicitamente en el texto o DESCARTA esa pregunta y genera otra.
+Despues genera una pregunta COMPLETAMENTE NUEVA y gramatical basada en esos elementos.
 
-4. La pregunta debe preguntar EXACTAMENTE por el tipo de informacion presente en la respuesta correcta. Analiza primero que describe la respuesta y luego formula la pregunta acorde:
-   - Si la respuesta describe una CARACTERISTICA → pregunta "¿Qué característica tiene...?" o "¿Cómo es...?"
-   - Si describe una COMPOSICION → pregunta "¿De qué está compuesto...?" o "¿Qué contiene...?"
-   - Si describe una UBICACION → pregunta "¿Dónde se encuentra...?"
-   - Si describe un ORIGEN → pregunta "¿De qué se forma...?" o "¿De dónde proviene...?"
-   - Si describe una FUNCION → pregunta "¿Qué función cumple...?"
-   - Si describe una CLASIFICACION → pregunta "¿Cómo se clasifica...?" o "¿Qué tipo de...?"
-   - NUNCA utilices estructuras genericas como "¿Qué tiene/contiene X?" si la respuesta no describe algo que X contenga literalmente.
-   - MAL: "¿Qué tiene Urano?" (si la respuesta es "anillos de hielo")
-   - MAL: "¿Qué tiene la atmósfera?" (si la respuesta es "capas de gases como nitrógeno y oxígeno")
-   - BIEN: "¿Qué tipo de anillos tiene Urano?"
-   - BIEN: "¿De qué gases está compuesta la atmósfera terrestre?"
+EJEMPLOS:
+Texto: "Su atmosfera esta dominada por hidrogeno y helio..."
+❌ "¿Que es su atmosfera?"
+✅ "¿Como es la atmosfera de Jupiter?"
 
-5. Cada pregunta debe ser una ORACION COMPLETA y gramaticalmente correcta.
-   - Multiple: Debe empezar con "¿" y ser una pregunta real.
-   - V/F: Debe ser una AFIRMACION completa, independiente y comprensible sin necesidad de leer el texto original. Incluye siempre el sujeto y contexto necesario.
-   - MAL V/F: "Está formado por roca y metal." (¿Que esta formado?)
-   - BIEN V/F: "Los planetas rocosos del Sistema Solar están formados por roca y metal."
+Texto: "Su distancia al Sol, la presencia de agua liquida, una atmosfera protectora y un campo magnetico estable son factores que han permitido el desarrollo de ecosistemas complejos."
+❌ "¿Que es su distancia al Sol, la presencia de agua liquida...?"
+✅ "¿Que factores han permitido el desarrollo de ecosistemas complejos durante miles de millones de anos?"
 
-6. Si una pregunta contiene ERRORES GRAMATICALES, PALABRAS REPETIDAS, PALABRAS SOBRANTES o una estructura como "¿Qué es + [oracion completa]?", considerala INVALIDA y regenerala. Verifica cada pregunta antes de incluirla en el JSON.
+Texto: "Se cree que estos objetos son remanentes de la formacion del Sistema Solar..."
+❌ "¿Que es se cree que estos objetos?"
+✅ "¿Que se cree que son los asteroides segun el texto?"
 
-6. NUNCA generes preguntas con palabras sueltas o fragmentos rotos como "Segun el texto, se aun mas lejos?" Debe ser "¿Qué se encuentra mas alla del Sistema Solar?"
+REGLAS ESPECIFICAS:
+- NUNCA empieces una pregunta con "¿Que es...?" si la respuesta no es una definicion.
+- NUNCA uses "su", "estos", "estos objetos", "ellos", "esta" si el referente no aparece explicitamente en la pregunta.
+- NUNCA copies titulos, encabezados como "Introduccion" o nombres de secciones dentro de las preguntas.
+- NUNCA mezcles partes de diferentes oraciones.
+- NUNCA agregues palabras como "sobre", "es", "contiene" o "tiene" si no son necesarias.
+- NUNCA generes preguntas como "¿Que es [oracion completa]?".
+- Si una oracion no permite crear una pregunta clara, DESCARTALA y selecciona otra oracion del texto.
+- La pregunta debe poder entenderse completamente sin leer el texto original.
+- La respuesta correcta debe responder exactamente a lo que pregunta la pregunta.
+- Los distractores deben ser respuestas plausibles al mismo tipo de pregunta, no fragmentos aleatorios de otras partes del texto.
+- La respuesta correcta debe ser una FRASE COMPLETA, nunca un fragmento cortado con "...".
+- Los distractores deben tener la MISMA ESTRUCTURA que la respuesta correcta.
+- NUNCA uses como opciones: titulos del documento, encabezados de seccion, nombres del libro.
 
-7. La respuesta correcta debe ser una FRASE COMPLETA, nunca un fragmento cortado.
-   - CORRECTO: "Más del 99% de la masa total del Sistema Solar"
-   - INCORRECTO: "más del 99% de la masa total del sistema y ejerce, mediante su gravedad, el c..."
-
-8. Los distractores deben tener la MISMA ESTRUCTURA que la respuesta correcta.
-   - Si la correcta es "Entre Marte y Júpiter", los distractores deben ser: "Entre la Tierra y Marte", "Entre Saturno y Urano", etc.
-
-9. NUNCA uses como opciones: titulos del documento, encabezados de seccion, nombres del libro.
-
-10. El campo "correct" es el INDICE (0, 1, 2 o 3) de la opcion correcta.
-
-11. Cada explicacion debe citar que parte del texto respalda la respuesta.
+Para V/F: La afirmacion debe ser completa, independiente y comprensible sola. Incluye siempre el sujeto y contexto necesario.
+❌ "Esta formado por roca y metal."
+✅ "Los planetas rocosos del Sistema Solar estan formados por roca y metal."
 
 ${typeLine}
 
-FASE 2 - REVISAR Y CORREGIR cada pregunta antes de devolver el JSON.
+Cada explicacion debe citar que parte del texto respalda la respuesta.
 
-Para CADA pregunta generada, verifica:
-a) ¿La pregunta se entiende sola sin leer el texto original?
-b) ¿La pregunta esta bien redactada en español, sin pronombres sin contexto ("su", "esta", "estos")?
-c) ¿La respuesta correcta responde DIRECTAMENTE a lo que pregunta?
-d) ¿Las opciones incorrectas son plausibles y tienen estructura similar a la correcta?
-e) ¿Hay fragmentos de titulos, encabezados o nombres de documento como opciones?
-f) ¿Hay puntos suspensivos "..." o texto cortado en las opciones?
-g) ¿La pregunta copia literalmente una oracion del texto en vez de transformarla en una pregunta?
-h) ¿Es una pregunta V/F que no se entiende sin leer el texto original?
+=== VALIDACION OBLIGATORIA ANTES DE MOSTRAR CADA PREGUNTA ===
 
-Si alguna pregunta NO pasa estas verificaciones, ELIMINALA y genera una nueva basada en otra oracion del texto. Si no puedes corregirla, descartala. Nunca devuelvas una pregunta defectuosa.
+Antes de incluir cada pregunta en el JSON, validala internamente con estas 3 preguntas:
+1. "Si alguien lee solamente la pregunta y las opciones, ¿sabe exactamente que esta preguntando?"
+2. "¿La respuesta correcta responde directamente a esa pregunta?"
+3. "¿La pregunta tiene sujeto, verbo y estructura gramatical correcta?"
 
-DEVUELVE SOLO EL JSON FINAL CON LAS PREGUNTAS CORREGIDAS:
+Si alguna respuesta es NO, regenera la pregunta antes de mostrarla. Si no puedes regenerarla, descartala y genera otra basada en un fragmento diferente del texto.
+
+DEVUELVE SOLO EL JSON FINAL:
 {"questions":[${example}]}
 
 IMPORTANTE: Responde SOLO con el JSON. Sin markdown, sin backticks, sin texto antes o despues.`;
