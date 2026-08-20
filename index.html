@@ -919,6 +919,15 @@ REGLA CRITICA 4: La pregunta debe construirse a partir del TIPO DE INFORMACION d
 
 REGLA CRITICA 5: La respuesta correcta debe responder DIRECTAMENTE a lo que pregunta la pregunta. Si la respuesta no puede responderse con la informacion que contiene la pregunta, DESCARTA la pregunta y genera otra.
 
+REGLA CRITICA 6: Si el texto contiene un pronombre como "su", "estos", "estos objetos", "ellos", etc., NUNCA utilices ese pronombre directamente en la pregunta. Primero identifica a que entidad se refiere y reemplaza el pronombre por el nombre de dicha entidad.
+- Texto: "Su atmosfera esta dominada por hidrogeno y helio..."
+❌ "¿Que es su atmosfera?"
+✅ "¿Como es la atmosfera de Jupiter?"
+- Texto: "Se cree que estos objetos son remanentes..."
+❌ "¿Que es se cree que estos objetos?"
+✅ "¿Que se cree que son los asteroides?"
+- NUNCA generes una pregunta que contenga "¿Que es se cree...?" o "¿Que es su...?". Si aparece una estructura de este tipo, la pregunta es INVALIDA y debe regenerarse.
+
 === REGLAS DE CALIDAD ===
 
 - La pregunta debe poder entenderse completamente sin leer el texto original.
