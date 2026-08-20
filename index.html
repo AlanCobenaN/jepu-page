@@ -873,77 +873,69 @@
                 example = `{"question":"¿Qué tipo de estrella es el Sol?","options":["Una estrella enana amarilla de tipo G2V","Una estrella gigante roja de tipo M","Una enana blanca de tipo D","Una supergigante azul de tipo O"],"correct":0,"explanation":"El texto clasifica al Sol como una estrella de tipo espectral G2V, comunmente conocida como enana amarilla."}`;
             }
 
-            return `Eres un profesor universitario experto. Tu tarea es generar ${count} preguntas de examen de alta calidad basadas en el texto proporcionado. Luego debes VALIDAR cada pregunta antes de entregarla.
+            return `Eres un profesor universitario experto. Tu tarea es generar ${count} preguntas de examen de alta calidad basadas en el texto proporcionado.
 
 === TEXTO DEL LIBRO ===
 ${content.substring(0, 14000)}
 
-=== PRE-PROCESAMIENTO OBLIGATORIO ===
-Los titulos y encabezados NO son contenido evaluable. ANTES de generar CUALQUIER pregunta, elimina completamente del texto palabras como "Introduccion", "Capitulo", "Conclusion", nombres de secciones y subtitulos. NUNCA pueden aparecer dentro de una pregunta ni en las opciones.
+=== REGLA CRITICA PREVIA ===
+Los titulos, subtitulos y encabezados como "Introduccion", "Capitulo", "Conclusion", nombres de secciones o libros NO son contenido evaluable. ELIMINALOS completamente antes de procesar el texto. NUNCA pueden aparecer dentro de una pregunta ni en las opciones.
 
-=== REGLAS OBLIGATORIAS PARA GENERAR LAS PREGUNTAS ===
+=== PROCESO OBLIGATORIO DE GENERACION EN 3 PASOS ===
 
-REGLA FUNDAMENTAL: No conviertas directamente una oracion del texto en una pregunta. Primero analiza semanticamente la informacion y determina que concepto se quiere evaluar.
+Para cada oracion util del texto, aplica estos 3 pasos SIN EXCEPCION:
 
-Para cada pregunta debes identificar:
-- Sujeto o entidad: de quien o de que se esta hablando.
-- Informacion principal: que caracteristica, dato, accion, ubicacion o relacion se describe.
-- Tipo de pregunta: que, cual, como, donde, verdadero/falso, etc.
-- Respuesta correcta: debe responder directamente a la pregunta.
+**Paso 1 — IDENTIFICAR:**
+Determina cual es la entidad principal de la informacion (Sol, Jupiter, Mercurio, Urano, cinturon de asteroides, etc.) y cual es el dato que se quiere evaluar.
 
-Despues genera una pregunta COMPLETAMENTE NUEVA y gramatical basada en esos elementos.
+**Paso 2 — FORMULAR:**
+Crea una pregunta NUEVA desde cero basada en esa relacion entidad-dato. NO transformes mecanicamente la oracion original en una pregunta.
 
-EJEMPLOS:
+**Paso 3 — VALIDAR:**
+Comprueba que la pregunta pueda entenderse SIN el texto original y que la respuesta correcta responda DIRECTAMENTE a ella.
+
+EJEMPLO DEL PROCESO:
 Texto: "Su atmosfera esta dominada por hidrogeno y helio..."
-❌ "¿Que es su atmosfera?"
-✅ "¿Como es la atmosfera de Jupiter?"
 
-Texto: "Su distancia al Sol, la presencia de agua liquida, una atmosfera protectora y un campo magnetico estable son factores que han permitido el desarrollo de ecosistemas complejos."
-❌ "¿Que es su distancia al Sol, la presencia de agua liquida...?"
-✅ "¿Que factores han permitido el desarrollo de ecosistemas complejos durante miles de millones de anos?"
+Paso 1 — Entidad: Jupiter. Dato: composicion de su atmosfera.
+Paso 2 — Pregunta: "¿Como es la atmosfera de Jupiter segun el texto?"
+Paso 3 — Se entiende sola? SI. La respuesta responde a la pregunta? SI. → VALIDA.
 
-Texto: "Se cree que estos objetos son remanentes de la formacion del Sistema Solar..."
-❌ "¿Que es se cree que estos objetos?"
-✅ "¿Que se cree que son los asteroides segun el texto?"
+NUNCA produzcas: "¿Que es su atmosfera?"
 
-REGLAS ESPECIFICAS:
-- NUNCA empieces una pregunta con "¿Que es...?" si la respuesta no es una definicion.
-- NUNCA uses "su", "estos", "estos objetos", "ellos", "esta" si el referente no aparece explicitamente en la pregunta.
-- NUNCA copies titulos, encabezados como "Introduccion" o nombres de secciones dentro de las preguntas.
-- NUNCA mezcles partes de diferentes oraciones.
-- NUNCA agregues palabras como "sobre", "es", "contiene" o "tiene" si no son necesarias.
-- NUNCA generes preguntas como "¿Que es [oracion completa]?".
-- Si una oracion no permite crear una pregunta clara, DESCARTALA y selecciona otra oracion del texto.
-- La pregunta debe poder entenderse completamente sin leer el texto original.
-- La respuesta correcta debe responder exactamente a lo que pregunta la pregunta.
-- Los distractores deben ser respuestas plausibles al mismo tipo de pregunta, no fragmentos aleatorios de otras partes del texto.
-- La respuesta correcta debe ser una FRASE COMPLETA, nunca un fragmento cortado con "...".
-- Los distractores deben tener la MISMA ESTRUCTURA que la respuesta correcta.
-- NUNCA uses como opciones: titulos del documento, encabezados de seccion, nombres del libro.
-- La pregunta debe construirse a partir del TIPO DE INFORMACION de la respuesta correcta. Si la respuesta describe una caracteristica de rotacion, pregunta por la rotacion. Si describe la composicion de una atmosfera, pregunta por la atmosfera. Si describe una ubicacion, pregunta por la ubicacion. No utilices preguntas genericas como "¿Que tiene/contiene X?" salvo que la respuesta realmente indique que contiene X.
+=== REGLAS CRITICAS ===
+
+REGLA CRITICA 1: Si una pregunta contiene estructuras gramaticalmente anormales como "¿Que es se cree...?", "¿Que se menciona sobre es...?", "¿Que es su...?" o combina un titulo con una oracion, la pregunta es INVALIDA y debe regenerarse antes de mostrarse.
+
+REGLA CRITICA 2: Los titulos, subtitulos y encabezados como "Introduccion" no forman parte del contenido y deben eliminarse antes de generar preguntas.
+
+REGLA CRITICA 3: Nunca uses "su", "estos", "estos objetos", "ellos", etc. cuando el referente no este explicitamente identificado en la pregunta.
+
+REGLA CRITICA 4: La pregunta debe construirse a partir del TIPO DE INFORMACION de la respuesta correcta. Si la respuesta describe una caracteristica de rotacion, pregunta por la rotacion. Si describe la composicion de una atmosfera, pregunta por la atmosfera. Si describe una ubicacion, pregunta por la ubicacion. No utilices preguntas genericas como "¿Que tiene/contiene X?" salvo que la respuesta realmente indique que contiene X.
   - MAL: "¿Que tiene Urano?" si la respuesta es "Su eje esta inclinado 98 grados"
   - MAL: "¿Que tiene la atmosfera?" si la respuesta es "capas de gases como nitrogeno y oxigeno"
   - BIEN: "¿Cual es la inclinacion del eje de Urano?"
   - BIEN: "¿De que gases esta compuesta la atmosfera terrestre?"
 
-Para V/F: La afirmacion debe ser completa, independiente y comprensible sola. Incluye siempre el sujeto y contexto necesario.
-❌ "Esta formado por roca y metal."
-✅ "Los planetas rocosos del Sistema Solar estan formados por roca y metal."
+REGLA CRITICA 5: La respuesta correcta debe responder DIRECTAMENTE a lo que pregunta la pregunta. Si la respuesta no puede responderse con la informacion que contiene la pregunta, DESCARTA la pregunta y genera otra.
+
+=== REGLAS DE CALIDAD ===
+
+- La pregunta debe poder entenderse completamente sin leer el texto original.
+- NUNCA empieces una pregunta con "¿Que es...?" si la respuesta no es una definicion.
+- NUNCA mezcles partes de diferentes oraciones.
+- Si una oracion no permite crear una pregunta clara, DESCARTALA y selecciona otra oracion del texto.
+- Los distractores deben ser respuestas plausibles al mismo tipo de pregunta, no fragmentos aleatorios de otras partes del texto.
+- La respuesta correcta debe ser una FRASE COMPLETA, nunca un fragmento cortado con "...".
+- Los distractores deben tener la MISMA ESTRUCTURA que la respuesta correcta.
+- NUNCA uses como opciones: titulos del documento, encabezados de seccion, nombres del libro.
+- Para V/F: La afirmacion debe ser completa, independiente y comprensible sola. Incluye siempre el sujeto y contexto necesario.
+  ❌ "Esta formado por roca y metal."
+  ✅ "Los planetas rocosos del Sistema Solar estan formados por roca y metal."
 
 ${typeLine}
 
 Cada explicacion debe citar que parte del texto respalda la respuesta.
-
-=== VALIDACION OBLIGATORIA ANTES DE MOSTRAR CADA PREGUNTA ===
-
-Antes de incluir cada pregunta en el JSON, validala internamente con estas 3 preguntas:
-1. "Si alguien lee solamente la pregunta y las opciones, ¿sabe exactamente que esta preguntando?"
-2. "¿La respuesta correcta responde directamente a esa pregunta?"
-3. "¿La pregunta tiene sujeto, verbo y estructura gramatical correcta?"
-
-Si alguna respuesta es NO, regenera la pregunta antes de mostrarla. Si no puedes regenerarla, descartala y genera otra basada en un fragmento diferente del texto.
-
-VALIDACION FINAL POR PREGUNTA: Despues de generar cada pregunta, compara la pregunta con la respuesta correcta. Si la respuesta no puede responderse DIRECTAMENTE con la informacion que contiene la pregunta, DESCARTA la pregunta y genera otra. La pregunta debe ser lo suficientemente especifica para que la respuesta correcta sea la unica que encaje.
 
 DEVUELVE SOLO EL JSON FINAL:
 {"questions":[${example}]}
