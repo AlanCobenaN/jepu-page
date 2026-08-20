@@ -882,24 +882,40 @@ ${content.substring(0, 14000)}
 
 REGLAS DE GENERACION:
 
-1. Cada pregunta debe ser una ORACION COMPLETA y gramaticalmente correcta.
-   - Multiple: Debe empezar con "¿" y ser una pregunta real. Ej: "¿Qué concentra el Sol?"
-   - V/F: Debe ser una AFIRMACION clara con sujeto. Ej: "El Sistema Solar tiene ocho planetas."
+1. NUNCA copies directamente la oracion original como pregunta. Debes TRANSFORMAR la informacion en una pregunta completa.
+   - MAL: "El Sol concentra más del 99% de la masa total del sistema y ejerce, mediante su gravedad, el control orbital de todos los demás cuerpos."
+   - BIEN: "¿Qué porcentaje de la masa total del Sistema Solar concentra el Sol?"
 
-2. NUNCA generes preguntas que empiecen con palabras sueltas o fragmentos como "Según el texto, se aún más lejos?" Eso esta MAL. Debe ser "¿Qué se encuentra más allá del Sistema Solar?"
+2. ELIMINA siempre titulos, subtitulos y palabras como "Introduccion", "Capitulo", "Conclusion" antes de generar la pregunta. NUNCA hagas preguntas sobre el titulo del documento ni sobre la estructura del texto.
 
-3. La respuesta correcta debe ser una FRASE COMPLETA, nunca un fragmento cortado.
+3. Si la oracion utiliza pronombres o referencias sin contexto como "su", "estos", "esta", "ellos" o "aquellos", REEMPLAZALOS por el nombre del sujeto correspondiente para que la pregunta pueda entenderse por si sola.
+   - MAL: "¿Qué tiene su atmósfera?"
+   - BIEN: "¿Qué tiene la atmósfera de la Tierra?"
+
+4. NUNCA generes preguntas incompletas como "¿Qué es su atmósfera?" o "¿Qué tiene Urano?" si la respuesta habla de una caracteristica especifica. En esos casos, pregunta directamente por esa caracteristica:
+   - MAL: "¿Qué tiene Urano?" (si la respuesta es "anillos de hielo")
+   - BIEN: "¿Qué tipo de anillos tiene Urano?"
+
+5. Cada pregunta debe ser una ORACION COMPLETA y gramaticalmente correcta.
+   - Multiple: Debe empezar con "¿" y ser una pregunta real.
+   - V/F: Debe ser una AFIRMACION completa, independiente y comprensible sin necesidad de leer el texto original. Incluye siempre el sujeto y contexto necesario.
+   - MAL V/F: "Está formado por roca y metal." (¿Que esta formado?)
+   - BIEN V/F: "Los planetas rocosos del Sistema Solar están formados por roca y metal."
+
+6. NUNCA generes preguntas con palabras sueltas o fragmentos rotos como "Segun el texto, se aun mas lejos?" Debe ser "¿Qué se encuentra mas alla del Sistema Solar?"
+
+7. La respuesta correcta debe ser una FRASE COMPLETA, nunca un fragmento cortado.
    - CORRECTO: "Más del 99% de la masa total del Sistema Solar"
    - INCORRECTO: "más del 99% de la masa total del sistema y ejerce, mediante su gravedad, el c..."
 
-4. Los distractores deben tener la MISMA ESTRUCTURA que la respuesta correcta.
+8. Los distractores deben tener la MISMA ESTRUCTURA que la respuesta correcta.
    - Si la correcta es "Entre Marte y Júpiter", los distractores deben ser: "Entre la Tierra y Marte", "Entre Saturno y Urano", etc.
 
-5. NUNCA uses como opciones: titulos del documento, encabezados de seccion, nombres del libro.
+9. NUNCA uses como opciones: titulos del documento, encabezados de seccion, nombres del libro.
 
-6. El campo "correct" es el INDICE (0, 1, 2 o 3) de la opcion correcta.
+10. El campo "correct" es el INDICE (0, 1, 2 o 3) de la opcion correcta.
 
-7. Cada explicacion debe citar que parte del texto respalda la respuesta.
+11. Cada explicacion debe citar que parte del texto respalda la respuesta.
 
 ${typeLine}
 
@@ -907,11 +923,13 @@ FASE 2 - REVISAR Y CORREGIR cada pregunta antes de devolver el JSON.
 
 Para CADA pregunta generada, verifica:
 a) ¿La pregunta se entiende sola sin leer el texto original?
-b) ¿La pregunta esta bien redactada en español y no tiene palabras sueltas?
+b) ¿La pregunta esta bien redactada en español, sin pronombres sin contexto ("su", "esta", "estos")?
 c) ¿La respuesta correcta responde DIRECTAMENTE a lo que pregunta?
 d) ¿Las opciones incorrectas son plausibles y tienen estructura similar a la correcta?
 e) ¿Hay fragmentos de titulos, encabezados o nombres de documento como opciones?
 f) ¿Hay puntos suspensivos "..." o texto cortado en las opciones?
+g) ¿La pregunta copia literalmente una oracion del texto en vez de transformarla en una pregunta?
+h) ¿Es una pregunta V/F que no se entiende sin leer el texto original?
 
 Si alguna pregunta NO pasa estas verificaciones, ELIMINALA y genera una nueva basada en otra oracion del texto. Si no puedes corregirla, descartala. Nunca devuelvas una pregunta defectuosa.
 
