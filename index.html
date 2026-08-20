@@ -751,33 +751,61 @@
                 q.options.some(o => /^verdadero$/i.test(o)) &&
                 q.options.some(o => /^falso$/i.test(o));
 
-            if (!isV_F) {
-                // Multiple choice: must start with question word
-                const validStarts = ['¿', 'que ', 'qué ', 'cuál', 'cual', 'cuánto', 'cuanto',
-                    'dónde', 'donde', 'cuándo', 'cuando', 'quién', 'quien', 'cómo', 'como',
-                    'según', 'segun', 'de ', 'en ', 'por '];
-                if (!validStarts.some(s => qLower.startsWith(s))) return false;
-                // Must contain ¿
-                if (!q.question.includes('¿')) return false;
+            // --- CHECK 1: Encabezados / titulos ---
+            const headerPatterns = /\b(introduccion|introducción|conclusion|conclusión|capitulo|capítulo|indice|índice|bibliografia|bibliografía)\b/i;
+            if (headerPatterns.test(q.question)) return false;
+
+            // --- CHECK 2: Estructuras rotas ---
+            if (/¿qué es su\b/i.test(q.question)) return false;
+            if (/¿qué es se\b/i.test(q.question)) return false;
+            if (/¿qué se menciona sobre es\b/i.test(q.question)) return false;
+            if (/¿qué es\s+\w+\s*:/i.test(q.question)) return false;
+
+            // --- CHECK 3: Pronombres sin referente ---
+            const pronounPatterns = /\b(su|estos|estas|ellos|ellas|aquellos|aquellas)\b/i;
+            // "su" only invalid if followed by noun without entity name before it
+            const hasUnresolvedSu = /(?:^|\s)su\s+(?:atmósfera|campo|masa|composición|eje|órbita|rotación|superficie|interior|formación| temperatura|densidad|gravedad|lunas|anillos|distancia)/i.test(q.question);
+            const hasPronounReferent = /(?:la|el|los|las|del|de la|de los|de las)\s+\w+/i.test(q.question);
+            if (hasUnresolvedSu && !hasPronounReferent) return false;
+
+            // --- CHECK 4: "¿Qué es...?" como plantilla generica ---
+            // Only allow "¿Qué es X?" when X is a single entity name (definition)
+            const queEsMatch = q.question.match(/¿qué es\s+(.+)/i);
+            if (queEsMatch) {
+                const afterQueEs = queEsMatch[1].trim();
+                // Allow: "¿Qué es Júpiter?" "¿Qué es el Sol?"
+                // Reject: "¿Qué es su atmósfera?" "¿Qué es se cree que..."
+                // Reject if has pronouns, broken structures, or is too long (not a simple definition)
+                if (/su\b/i.test(afterQueEs)) return false;
+                if (/se\b/i.test(afterQueEs)) return false;
+                if (afterQueEs.length > 40) return false; // too complex for a definition
+                // Must NOT contain ":" (indicates title contamination)
+                if (afterQueEs.includes(':')) return false;
             }
 
-            // At least 15 characters
-            if (q.question.trim().length < 15) return false;
-
-            // No "..." in options
+            // --- CHECK 5: Opciones con "..." o muy cortas ---
             for (const opt of q.options) {
                 if (opt && opt.endsWith('...')) return false;
                 if (opt && opt.length < 3) return false;
             }
 
-            // No titles as options
-            const titlePatterns = /^(introduccion|capitulo|conclusion|indice|bibliografia)/i;
+            // --- CHECK 6: Titulos como opciones ---
+            const titleOptPatterns = /^(introduccion|introducción|capitulo|capítulo|conclusion|conclusión|indice|índice|bibliografia|bibliografía)/i;
             for (const opt of q.options) {
-                if (titlePatterns.test(opt.trim())) return false;
+                if (titleOptPatterns.test(opt.trim())) return false;
             }
 
-            // No broken fragments
-            if (q.question.includes('se aún más lejos') || q.question.includes('se aun mas lejos')) return false;
+            // --- CHECK 7: Longitud minima ---
+            if (q.question.trim().length < 15) return false;
+
+            // --- CHECK 8: Multiple choice must start with question word ---
+            if (!isV_F) {
+                const validStarts = ['¿', 'que ', 'qué ', 'cuál', 'cual', 'cuánto', 'cuanto',
+                    'dónde', 'donde', 'cuándo', 'cuando', 'quién', 'quien', 'cómo', 'como',
+                    'según', 'segun', 'de ', 'en ', 'por '];
+                if (!validStarts.some(s => qLower.startsWith(s))) return false;
+                if (!q.question.includes('¿')) return false;
+            }
 
             return true;
         }
@@ -935,7 +963,11 @@ REGLA CRITICA 8: Cuando una pregunta de verdadero/falso se base en una oracion d
 === REGLAS DE CALIDAD ===
 
 - La pregunta debe poder entenderse completamente sin leer el texto original.
-- NUNCA empieces una pregunta con "¿Que es...?" si la respuesta no es una definicion.
+- "¿Que es...?" SOLO es valido cuando pide una definicion de una entidad concreta: "¿Que es Jupiter?", "¿Que es Mercurio?". Es INVALIDO en todos los demas casos:
+  ❌ "¿Que es su atmosfera?" (pronombre sin referente)
+  ❌ "¿Que es se cree que estos objetos?" (estructura rota)
+  ❌ "¿Que es el Sistema Solar: ... este documento?" (titulo contaminado)
+  ❌ "¿Que es la atmosfera?" (respuesta describe composicion, no definicion)
 - NUNCA mezcles partes de diferentes oraciones.
 - Si una oracion no permite crear una pregunta clara, DESCARTALA y selecciona otra oracion del texto.
 - Los distractores deben ser respuestas plausibles al mismo tipo de pregunta, no fragmentos aleatorios de otras partes del texto.
