@@ -217,8 +217,8 @@
         }
         .question-card .option:hover { background: var(--card-hover); border-color: var(--primary-dark); }
         .question-card .option.selected { background: rgba(124,58,237,0.15); border-color: var(--primary); }
-        .question-card .option.correct { background: rgba(52,211,153,0.12); border-color: var(--success); color: var(--success); }
-        .question-card .option.incorrect { background: rgba(248,113,113,0.12); border-color: var(--danger); color: var(--danger); }
+        .question-card .option.correct { background: rgba(34,197,94,0.2); border-color: #22c55e; color: #4ade80; font-weight: 600; }
+        .question-card .option.incorrect { background: rgba(239,68,68,0.25); border-color: #ef4444; color: #f87171; font-weight: 600; text-decoration: line-through; }
         .question-card .option input { display: none; }
         .question-card .explanation {
             margin-top: 0.75rem; padding: 0.75rem;
@@ -873,40 +873,52 @@
                 example = `{"question":"¿Qué concentra el Sol?","options":["Más del 99% de la masa del Sistema Solar","Todos los planetas rocosos","La mitad de la masa total","Todos los asteroides"],"correct":0,"explanation":"El Sol concentra más del 99% de la masa total."}`;
             }
 
-            return `Eres un profesor universitario. Crea EXACTAMENTE ${count} preguntas de examen basadas en este texto.
+            return `Eres un profesor universitario experto. Tu tarea tiene DOS FASES: generar preguntas y luego REVISARLAS antes de entregarlas.
+
+FASE 1 - GENERAR ${count} PREGUNTAS basadas en el siguiente texto:
 
 TEXTO:
 ${content.substring(0, 14000)}
 
-REGLAS OBLIGATORIAS (SIEMPRE):
+REGLAS DE GENERACION:
 
-1. Cada pregunta debe ser una ORACION COMPLETA y gramaticalmente correcta que empiece con "¿". 
-   Ejemplos validos: "¿Qué es el Sistema Solar?", "¿Dónde se encuentra el cinturón de asteroides?", "¿Cuántos planetas tiene el Sistema Solar?"
+1. Cada pregunta debe ser una ORACION COMPLETA y gramaticalmente correcta.
+   - Multiple: Debe empezar con "¿" y ser una pregunta real. Ej: "¿Qué concentra el Sol?"
+   - V/F: Debe ser una AFIRMACION clara con sujeto. Ej: "El Sistema Solar tiene ocho planetas."
 
-2. NUNCA generes preguntas con palabras sueltas o fragmentos rotos. Si una pregunta no tiene sentido al leerla sola, ELIMINALA.
+2. NUNCA generes preguntas que empiecen con palabras sueltas o fragmentos como "Según el texto, se aún más lejos?" Eso esta MAL. Debe ser "¿Qué se encuentra más allá del Sistema Solar?"
 
-3. Cada respuesta correcta debe ser una FRASE COMPLETA y CLARA, no un fragmento cortado con "...". 
-   Ejemplo correcto: "Más del 99% de la masa total del Sistema Solar"
-   Ejemplo incorrecto: "más del 99% de la masa total del sistema y ejerce, mediante su gravedad, el c..."
+3. La respuesta correcta debe ser una FRASE COMPLETA, nunca un fragmento cortado.
+   - CORRECTO: "Más del 99% de la masa total del Sistema Solar"
+   - INCORRECTO: "más del 99% de la masa total del sistema y ejerce, mediante su gravedad, el c..."
 
-4. Las opciones incorrectas (distractores) deben tener la MISMA ESTRUCTURA y LONGITUD APROXIMADA que la respuesta correcta. Si la respuesta correcta es "Entre Marte y Júpiter", los distractores deben ser como "Entre la Tierra y Marte", "Entre Saturno y Urano", etc.
+4. Los distractores deben tener la MISMA ESTRUCTURA que la respuesta correcta.
+   - Si la correcta es "Entre Marte y Júpiter", los distractores deben ser: "Entre la Tierra y Marte", "Entre Saturno y Urano", etc.
 
-5. NUNCA uses como opciones: titulos del documento, encabezados de seccion, nombres del libro, fragmentos de parrafos enteros.
+5. NUNCA uses como opciones: titulos del documento, encabezados de seccion, nombres del libro.
 
 6. El campo "correct" es el INDICE (0, 1, 2 o 3) de la opcion correcta.
 
-7. Cada pregunta debe evaluar COMPRENSION del contenido, no solo reconocer palabras.
-
-8. NO preguntes sobre el titulo del documento ni sobre la estructura del texto.
-
-9. Cada explicacion debe citar que parte del texto respalda la respuesta.
+7. Cada explicacion debe citar que parte del texto respalda la respuesta.
 
 ${typeLine}
 
-EJEMPLO DE JSON CORRECTO:
+FASE 2 - REVISAR Y CORREGIR cada pregunta antes de devolver el JSON.
+
+Para CADA pregunta generada, verifica:
+a) ¿La pregunta se entiende sola sin leer el texto original?
+b) ¿La pregunta esta bien redactada en español y no tiene palabras sueltas?
+c) ¿La respuesta correcta responde DIRECTAMENTE a lo que pregunta?
+d) ¿Las opciones incorrectas son plausibles y tienen estructura similar a la correcta?
+e) ¿Hay fragmentos de titulos, encabezados o nombres de documento como opciones?
+f) ¿Hay puntos suspensivos "..." o texto cortado en las opciones?
+
+Si alguna pregunta NO pasa estas verificaciones, ELIMINALA y genera una nueva basada en otra oracion del texto. Si no puedes corregirla, descartala. Nunca devuelvas una pregunta defectuosa.
+
+DEVUELVE SOLO EL JSON FINAL CON LAS PREGUNTAS CORREGIDAS:
 {"questions":[${example}]}
 
-RESPONDE SOLO CON JSON VALIDO. Sin markdown, sin backticks, sin texto adicional.`;
+IMPORTANTE: Responde SOLO con el JSON. Sin markdown, sin backticks, sin texto antes o despues.`;
         }
 
         // ========== OFFLINE QUIZ GENERATOR ==========
