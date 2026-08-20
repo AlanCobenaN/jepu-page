@@ -746,31 +746,38 @@
             if (!q || !q.question || !q.options || q.options.length < 2) return false;
             if (q.correct < 0 || q.correct >= q.options.length) return false;
 
-            // Question must start with ¿ or "Segun" or "Que" etc.
             const qLower = q.question.trim().toLowerCase();
-            const validStarts = ['¿', 'que ', 'qué ', 'cuál', 'cual', 'cuánto', 'cuanto',
-                'dónde', 'donde', 'cuándo', 'cuando', 'quién', 'quien', 'cómo', 'como',
-                'según', 'segun', 'de ', 'en ', 'por '];
-            if (!validStarts.some(s => qLower.startsWith(s))) return false;
+            const isV_F = q.options.length === 2 &&
+                q.options.some(o => /^verdadero$/i.test(o)) &&
+                q.options.some(o => /^falso$/i.test(o));
 
-            // Question must be at least 15 characters
+            if (!isV_F) {
+                // Multiple choice: must start with question word
+                const validStarts = ['¿', 'que ', 'qué ', 'cuál', 'cual', 'cuánto', 'cuanto',
+                    'dónde', 'donde', 'cuándo', 'cuando', 'quién', 'quien', 'cómo', 'como',
+                    'según', 'segun', 'de ', 'en ', 'por '];
+                if (!validStarts.some(s => qLower.startsWith(s))) return false;
+                // Must contain ¿
+                if (!q.question.includes('¿')) return false;
+            }
+
+            // At least 15 characters
             if (q.question.trim().length < 15) return false;
 
-            // No "..." in options (truncated text)
+            // No "..." in options
             for (const opt of q.options) {
                 if (opt && opt.endsWith('...')) return false;
                 if (opt && opt.length < 3) return false;
             }
 
-            // No titles/headers as options
+            // No titles as options
             const titlePatterns = /^(introduccion|capitulo|conclusion|indice|bibliografia)/i;
             for (const opt of q.options) {
                 if (titlePatterns.test(opt.trim())) return false;
             }
 
-            // Question must not contain orphaned words or fragments
+            // No broken fragments
             if (q.question.includes('se aún más lejos') || q.question.includes('se aun mas lejos')) return false;
-            if (q.question.match(/\b(se|que|el|la|los|las)\?\s*$/)) return false;
 
             return true;
         }
@@ -1017,10 +1024,10 @@ RESPONDE SOLO CON JSON VALIDO. Sin markdown, sin backticks, sin texto adicional.
 
             // Strategy 2: Negate
             const negations = [
-                [/\b(es)\b/, 'no es'], [/\\b(son)\\b/, 'no son'],
+                [/\b(es)\b/, 'no es'], [/\b(son)\b/, 'no son'],
                 [/\b(tiene)\b/, 'no tiene'], [/\b(contiene)\b/, 'no contiene'],
                 [/\b(concentra)\b/, 'no concentra'], [/\b(forma)\b/, 'no forma'],
-                [/\b(puede)\b/, 'no puede'], [/\\b(debe)\\b/, 'no debe']
+                [/\b(puede)\b/, 'no puede'], [/\b(debe)\b/, 'no debe']
             ];
             for (const [pattern, replacement] of negations) {
                 if (pattern.test(statement)) {
@@ -1091,8 +1098,12 @@ RESPONDE SOLO CON JSON VALIDO. Sin markdown, sin backticks, sin texto adicional.
                 options.forEach((opt, j) => {
                     opt.classList.remove('selected', 'correct', 'incorrect');
                     opt.style.pointerEvents = 'none';
-                    if (j === q.correct) opt.classList.add('correct');
-                    if (selected && parseInt(opt.dataset.opt) === parseInt(selected.value) && j !== q.correct) {
+
+                    if (j === q.correct) {
+                        // Always mark the correct answer green
+                        opt.classList.add('correct');
+                    } else if (selected && parseInt(opt.dataset.opt) === parseInt(selected.value)) {
+                        // Mark the wrong selected answer red
                         opt.classList.add('incorrect');
                     }
                 });
