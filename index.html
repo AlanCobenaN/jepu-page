@@ -635,7 +635,146 @@
         speechSynthesis.onvoiceschanged = loadVoices;
         loadVoices();
 
-        // Quiz
+        // ========== QUIZ GENERATION ==========
+
+        // Filter: skip titles, headers, short fragments, document names
+        const SKIP_PATTERNS = [
+            /^\s*(introduccion|conclusion|capitulo|indice|bibliografia|resumen|abstract|indice)\s*$/i,
+            /^.{0,30}\|/, // page headers
+            /^.{0,20}:$/, // short labels ending in :
+        ];
+
+        function isUsableSentence(s) {
+            if (!s || s.length < 25) return false;
+            if (SKIP_PATTERNS.some(p => p.test(s))) return false;
+            // Must end with period (complete sentence)
+            if (!s.endsWith('.') && !s.endsWith('.\"') && !s.endsWith('."')) return false;
+            // Must not be a title (no verb-like structure)
+            const words = s.split(/\s+/);
+            if (words.length < 5) return false;
+            return true;
+        }
+
+        // Extract the subject and "what it is/does" from a sentence
+        function extractFact(sentence) {
+            const s = sentence.replace(/[¿"?]$/g, '').trim();
+
+            // Pattern: "X es Y" / "X son Y" / "X tiene Y" / "X contiene Y" etc.
+            const copulative = s.match(/^(.+?)\s+(es|son|está|estan|tiene|tiene como|contiene|concentra|mantiene|ejerce|clasifica(?:da|do|cion)|considera(?:da|do)|forma(?:da|do)|consta(?:da|do)?|se (?:encuentra|encuentran|forma|clasifica|considera|denominan?|conoce|define)|constituye(?:da|do)?|pertenece|orbita(?:da|do)?|se (?:encuentran?|hallan?))\s+(.+?)\.?\s*$/i);
+
+            if (copulative) {
+                return {
+                    subject: copulative[1].trim(),
+                    verb: copulative[2],
+                    value: copulative[3].trim().replace(/[.]+$/, ''),
+                    fullSentence: s
+                };
+            }
+            return null;
+        }
+
+        // Build a proper question from a fact
+        function buildQuestionFromFact(fact) {
+            const subj = fact.subject.toLowerCase();
+            const verb = fact.verb.toLowerCase();
+
+            // Map verbs to natural question words
+            if (verb.includes('es') || verb.includes('son') || verb.includes('est')) {
+                if (verb.includes('clasific') || verb.includes('consider')) {
+                    return `¿Cómo se clasifica/considera ${subj}?`;
+                }
+                if (verb.includes('encuentr') || verb.includes('hall')) {
+                    return `¿Dónde se encuentra ${subj}?`;
+                }
+                return `¿Qué es ${subj}?`;
+            }
+            if (verb.includes('tiene') || verb.includes('contien')) {
+                return `¿Qué tiene/contiene ${subj}?`;
+            }
+            if (verb.includes('concentr')) {
+                return `¿Qué concentra ${subj}?`;
+            }
+            if (verb.includes('mantien') || verb.includes('ejerc')) {
+                return `¿Qué función cumple ${subj}?`;
+            }
+            if (verb.includes('form')) {
+                return `¿Cómo se forma ${subj}?`;
+            }
+            if (verb.includes('consta') || verb.includes('constituy')) {
+                return `¿De qué consta ${subj}?`;
+            }
+            if (verb.includes('orbit')) {
+                return `¿Qué orbita ${subj}?`;
+            }
+            // Generic fallback
+            return `Según el texto, ¿qué se menciona sobre ${subj}?`;
+        }
+
+        // Find plausible distractors: similar-length complete sentences about different topics
+        function findDistractors(pool, correctFact, excludeIdx, count) {
+            const distractors = [];
+            const correctValue = correctFact.value.toLowerCase();
+
+            // Sort by sentence length similarity to correct answer
+            const candidates = pool
+                .map((s, i) => ({ ...s, idx: i }))
+                .filter(c => c.idx !== excludeIdx && isUsableSentence(c.text))
+                .map(c => {
+                    const fact = extractFact(c.text);
+                    if (!fact) return null;
+                    // Skip if same subject
+                    if (fact.subject.toLowerCase() === correctFact.subject.toLowerCase()) return null;
+                    // Skip if same value
+                    if (fact.value.toLowerCase() === correctValue) return null;
+                    return { fact, length: fact.value.length };
+                })
+                .filter(Boolean)
+                .sort((a, b) => Math.abs(a.length - correctFact.value.length) - Math.abs(b.length - correctFact.value.length));
+
+            for (const c of candidates) {
+                if (distractors.length >= count) break;
+                // Must be a complete phrase, not truncated
+                if (c.fact.value.length < 10) continue;
+                distractors.push(c.fact.value);
+            }
+
+            return distractors;
+        }
+
+        // Validate a question has proper structure
+        function validateQuestion(q) {
+            if (!q || !q.question || !q.options || q.options.length < 2) return false;
+            if (q.correct < 0 || q.correct >= q.options.length) return false;
+
+            // Question must start with ¿ or "Segun" or "Que" etc.
+            const qLower = q.question.trim().toLowerCase();
+            const validStarts = ['¿', 'que ', 'qué ', 'cuál', 'cual', 'cuánto', 'cuanto',
+                'dónde', 'donde', 'cuándo', 'cuando', 'quién', 'quien', 'cómo', 'como',
+                'según', 'segun', 'de ', 'en ', 'por '];
+            if (!validStarts.some(s => qLower.startsWith(s))) return false;
+
+            // Question must be at least 15 characters
+            if (q.question.trim().length < 15) return false;
+
+            // No "..." in options (truncated text)
+            for (const opt of q.options) {
+                if (opt && opt.endsWith('...')) return false;
+                if (opt && opt.length < 3) return false;
+            }
+
+            // No titles/headers as options
+            const titlePatterns = /^(introduccion|capitulo|conclusion|indice|bibliografia)/i;
+            for (const opt of q.options) {
+                if (titlePatterns.test(opt.trim())) return false;
+            }
+
+            // Question must not contain orphaned words or fragments
+            if (q.question.includes('se aún más lejos') || q.question.includes('se aun mas lejos')) return false;
+            if (q.question.match(/\b(se|que|el|la|los|las)\?\s*$/)) return false;
+
+            return true;
+        }
+
         async function generateQuiz() {
             const start = parseInt(document.getElementById('quiz-start').value);
             const end = parseInt(document.getElementById('quiz-end').value);
@@ -645,7 +784,6 @@
             if (start < 1 || end > totalPages || start > end) { notify('Rango invalido'); return; }
             if (count < 1 || count > 20) { notify('Numero de preguntas invalido'); return; }
 
-            // Collect all sentences from selected pages
             let allSentences = [];
             let rawContent = '';
             for (let i = start; i <= end; i++) {
@@ -653,7 +791,7 @@
                 if (!data) continue;
                 rawContent += '\n\n' + data.cleanText;
                 for (const para of data.paragraphs) {
-                    const sents = para.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 15);
+                    const sents = para.split(/(?<=[.!?])\s+/).filter(s => isUsableSentence(s.trim()));
                     allSentences.push(...sents.map(s => ({ text: s.trim(), page: i })));
                 }
             }
@@ -669,13 +807,13 @@
                 document.getElementById('check-area').classList.add('hidden');
 
                 try {
-                    const prompt = buildPrompt(rawContent, count, type);
+                    const prompt = buildGeminiPrompt(rawContent, count, type);
                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             contents: [{ parts: [{ text: prompt }] }],
-                            generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }
+                            generationConfig: { temperature: 0.15, maxOutputTokens: 8192 }
                         })
                     });
 
@@ -691,7 +829,13 @@
                         throw new Error('JSON sin preguntas validas');
                     }
 
-                    quizQuestions = parsed.questions;
+                    // Validate each question
+                    const validQuestions = parsed.questions.filter(validateQuestion);
+                    if (validQuestions.length === 0) {
+                        throw new Error('Ninguna pregunta paso la validacion');
+                    }
+
+                    quizQuestions = validQuestions.slice(0, count);
                     renderQuiz();
                     notify(`${quizQuestions.length} preguntas generadas`);
                     document.getElementById('quiz-loading').classList.remove('show');
@@ -699,7 +843,7 @@
 
                 } catch (err) {
                     console.error('Gemini error:', err);
-                    notify('Gemini fallo: ' + err.message + '. Generando localmente...');
+                    notify('Gemini fallo. Generando localmente...');
                 }
 
                 document.getElementById('quiz-loading').classList.remove('show');
@@ -709,99 +853,144 @@
             generateOfflineQuiz(allSentences, count, type);
         }
 
-        function buildPrompt(content, count, type) {
-            let typeInstructions;
+        function buildGeminiPrompt(content, count, type) {
+            let typeLine, example;
             if (type === 'multiple') {
-                typeInstructions = 'TODAS las preguntas deben ser de multiple opcion con exactamente 4 alternativas (A, B, C, D). Solo una respuesta correcta por pregunta.';
+                typeLine = 'TODAS las preguntas deben ser de multiple opcion con 4 alternativas (A, B, C, D). Solo una correcta.';
+                example = `{"question":"¿Qué concentra el Sol según el texto?","options":["Más del 99% de la masa total del Sistema Solar","Todos los planetas terrestres","La mayor parte de los asteroides","La totalidad de las lunas del Sistema Solar"],"correct":0,"explanation":"El texto indica que el Sol concentra más del 99% de la masa total del sistema."}`;
             } else if (type === 'verdadero') {
-                typeInstructions = 'TODAS las preguntas deben ser de Verdadero o Falso. Las opciones SIEMPRE deben ser ["Verdadero", "Falso"]. El campo "correct" debe ser 0 para Verdadero y 1 para Falso.';
+                typeLine = 'TODAS deben ser Verdadero/Falso. Opciones: ["Verdadero", "Falso"]. correct: 0 para V, 1 para F.';
+                example = `{"question":"El Sistema Solar tiene ocho planetas que orbitan al Sol.","options":["Verdadero","Falso"],"correct":0,"explanation":"El texto menciona que el Sistema Solar tiene ocho planetas."}`;
             } else {
-                typeInstructions = 'MEZCLA: genera aproximadamente la mitad como multiple opcion (4 alternativas) y la mitad como Verdadero/Falso.';
+                typeLine = 'MEZCLA: mitad multiple (4 alternativas), mitad Verdadero/Falso.';
+                example = `{"question":"¿Qué concentra el Sol?","options":["Más del 99% de la masa del Sistema Solar","Todos los planetas rocosos","La mitad de la masa total","Todos los asteroides"],"correct":0,"explanation":"El Sol concentra más del 99% de la masa total."}`;
             }
 
-            return `Eres un profesor experto. Crea ${count} preguntas de examen basadas en el siguiente texto.
+            return `Eres un profesor universitario. Crea EXACTAMENTE ${count} preguntas de examen basadas en este texto.
 
 TEXTO:
-${content.substring(0, 12000)}
+${content.substring(0, 14000)}
 
-REGLAS:
-1. Cada pregunta debe tener UNA RESPUESTA CLARA y correcta que se pueda determinar leyendo el texto.
-2. Las preguntas deben evaluar COMPRENSION, no solo memorizacion. Por ejemplo:
-   - "Cuantos planetas tiene el Sistema Solar?" -> respuesta: "8"
-   - "Que tipo de estrella es el Sol?" -> respuesta: "Estrella tipo G2V / enana amarilla"
-   - "Que fuerza mantiene los objetos orbitando?" -> respuesta: "La gravedad"
-   - "De que se forma el Sistema Solar?" -> respuesta: "Del colapso de una nube molecular"
-3. Las opciones incorrectas deben ser creibles y del mismo tema, NO respuestas absurdas.
-4. NUNCA pongas fragmentos de texto como opciones. Las opciones deben ser respuestas cortas y directas.
-5. Cada pregunta debe tener una explicacion de 1-2 oraciones citando el texto.
+REGLAS OBLIGATORIAS (SIEMPRE):
 
-${typeInstructions}
+1. Cada pregunta debe ser una ORACION COMPLETA y gramaticalmente correcta que empiece con "¿". 
+   Ejemplos validos: "¿Qué es el Sistema Solar?", "¿Dónde se encuentra el cinturón de asteroides?", "¿Cuántos planetas tiene el Sistema Solar?"
 
-RESPONDE SOLO CON JSON VALIDO:
-{"questions":[{"question":"pregunta clara y directa","options":["respuesta A","respuesta B","respuesta C","respuesta D"],"correct":0,"explanation":"explicacion breve basada en el texto"}]}`;
+2. NUNCA generes preguntas con palabras sueltas o fragmentos rotos. Si una pregunta no tiene sentido al leerla sola, ELIMINALA.
+
+3. Cada respuesta correcta debe ser una FRASE COMPLETA y CLARA, no un fragmento cortado con "...". 
+   Ejemplo correcto: "Más del 99% de la masa total del Sistema Solar"
+   Ejemplo incorrecto: "más del 99% de la masa total del sistema y ejerce, mediante su gravedad, el c..."
+
+4. Las opciones incorrectas (distractores) deben tener la MISMA ESTRUCTURA y LONGITUD APROXIMADA que la respuesta correcta. Si la respuesta correcta es "Entre Marte y Júpiter", los distractores deben ser como "Entre la Tierra y Marte", "Entre Saturno y Urano", etc.
+
+5. NUNCA uses como opciones: titulos del documento, encabezados de seccion, nombres del libro, fragmentos de parrafos enteros.
+
+6. El campo "correct" es el INDICE (0, 1, 2 o 3) de la opcion correcta.
+
+7. Cada pregunta debe evaluar COMPRENSION del contenido, no solo reconocer palabras.
+
+8. NO preguntes sobre el titulo del documento ni sobre la estructura del texto.
+
+9. Cada explicacion debe citar que parte del texto respalda la respuesta.
+
+${typeLine}
+
+EJEMPLO DE JSON CORRECTO:
+{"questions":[${example}]}
+
+RESPONDE SOLO CON JSON VALIDO. Sin markdown, sin backticks, sin texto adicional.`;
         }
+
+        // ========== OFFLINE QUIZ GENERATOR ==========
 
         function generateOfflineQuiz(allSentences, count, type) {
             if (allSentences.length === 0) { notify('No hay suficiente contenido'); return; }
 
-            quizQuestions = [];
-            const used = new Set();
-
-            // Extract key facts: find sentences with definable content
-            const facts = allSentences.filter(s => {
-                const t = s.text.toLowerCase();
-                return t.includes(' es ') || t.includes(' son ') || t.includes(' tiene ') ||
-                       t.includes(' se ') || t.includes('.form') || t.includes('concentr') ||
-                       t.includes(' classific') || t.includes(' tipo ') || t.includes(' mas ') ||
-                       t.includes('consta') || t.includes(' contien') || t.includes(' orbit');
-            });
-
-            // Use all sentences as backup
-            const pool = facts.length > 3 ? facts : allSentences;
-
-            for (let i = 0; i < count && used.size < pool.length; i++) {
-                // Pick a sentence we haven't used
-                let idx = Math.floor(Math.random() * pool.length);
-                let attempts = 0;
-                while (used.has(idx) && attempts < pool.length) {
-                    idx = (idx + 1) % pool.length;
-                    attempts++;
+            // Build facts from all usable sentences
+            const facts = [];
+            for (let i = 0; i < allSentences.length; i++) {
+                const s = allSentences[i];
+                if (!isUsableSentence(s.text)) continue;
+                const fact = extractFact(s.text);
+                if (fact && fact.value.length >= 10) {
+                    facts.push({ ...fact, idx: i, page: s.page });
                 }
-                if (used.has(idx)) break;
-                used.add(idx);
+            }
 
-                const sentence = pool[idx];
+            if (facts.length < 2) {
+                notify('No hay suficiente contenido factual para preguntas');
+                return;
+            }
 
-                if (type === 'verdadero' || (type === 'mezcla' && i % 2 === 1)) {
-                    // True/False: use the actual sentence as true statement
-                    // For false, modify a key number or fact
-                    const isTrue = Math.random() > 0.4;
-                    let statement = sentence.text;
+            quizQuestions = [];
+            const usedFacts = new Set();
+            let attempts = 0;
+
+            while (quizQuestions.length < count && attempts < count * 10) {
+                attempts++;
+
+                // Pick a random unused fact
+                let factIdx = Math.floor(Math.random() * facts.length);
+                let tries = 0;
+                while (usedFacts.has(factIdx) && tries < facts.length) {
+                    factIdx = (factIdx + 1) % facts.length;
+                    tries++;
+                }
+                if (usedFacts.has(factIdx)) break;
+                usedFacts.add(factIdx);
+
+                const fact = facts[factIdx];
+
+                if (type === 'verdadero' || (type === 'mezcla' && quizQuestions.length % 2 === 1)) {
+                    // TRUE/FALSE question
+                    const isTrue = Math.random() > 0.35;
+                    let statement = fact.fullSentence;
 
                     if (!isTrue) {
-                        // Try to make it false by changing a number or key word
-                        statement = makeFalse(statement);
+                        // Make it false by changing a key detail
+                        statement = makeFalseStatement(fact);
                     }
 
-                    quizQuestions.push({
-                        question: statement,
+                    const q = {
+                        question: statement.replace(/[.]$/, ''),
                         options: ['Verdadero', 'Falso'],
                         correct: isTrue ? 0 : 1,
-                        explanation: isTrue
-                            ? `Correcto. El texto dice: "${sentence.text.substring(0, 100)}..."`
-                            : `Incorrecto. La afirmacion original del texto es diferente.`
-                    });
+                        explanation: `Según el texto: "${fact.fullSentence.substring(0, 150)}"`
+                    };
+
+                    if (validateQuestion(q)) {
+                        quizQuestions.push(q);
+                    }
+
                 } else {
-                    // Multiple choice: extract a key fact and create options
-                    const questionData = createMultipleQuestion(sentence, pool, idx);
-                    if (questionData) {
-                        quizQuestions.push(questionData);
+                    // MULTIPLE CHOICE question
+                    const question = buildQuestionFromFact(fact);
+                    const correctAnswer = fact.value;
+
+                    // Find 3 distractors of similar type
+                    const distractors = findDistractors(allSentences, fact, fact.idx, 3);
+
+                    if (distractors.length < 2) continue; // Need at least 2 distractors
+
+                    const options = [correctAnswer, ...distractors.slice(0, 3)]
+                        .sort(() => Math.random() - 0.5);
+
+                    const q = {
+                        question,
+                        options,
+                        correct: options.indexOf(correctAnswer),
+                        explanation: `Según el texto: "${fact.fullSentence.substring(0, 150)}"`
+                    };
+
+                    if (validateQuestion(q)) {
+                        quizQuestions.push(q);
                     }
                 }
             }
 
             if (quizQuestions.length === 0) {
-                notify('No se pudieron generar preguntas');
+                notify('No se pudieron generar preguntas validas');
                 return;
             }
 
@@ -809,105 +998,53 @@ RESPONDE SOLO CON JSON VALIDO:
             notify(`${quizQuestions.length} preguntas generadas`);
         }
 
-        function makeFalse(statement) {
-            // Change numbers
-            let modified = statement.replace(/\b(\d+)\b/g, (match, num) => {
-                const n = parseInt(num);
-                if (n === 1) return '2';
-                if (n > 1 && n < 100) return String(n + Math.floor(Math.random() * 3) + 1);
-                return num;
-            });
+        function makeFalseStatement(fact) {
+            let statement = fact.fullSentence;
+            const originalValue = fact.value;
 
-            // If no numbers changed, swap a word
-            if (modified === statement) {
-                const swaps = [
-                    ['gravedad', 'magnetismo'], ['magnetismo', 'gravedad'],
-                    ['sol', 'luna'], ['luna', 'sol'],
-                    ['planetas', 'estrellas'], ['estrellas', 'planetas'],
-                    ['mayor', 'menor'], ['menor', 'mayor'],
-                    ['formo', 'no formo'], ['contiene', 'no contiene']
-                ];
-                for (const [from, to] of swaps) {
-                    if (statement.toLowerCase().includes(from)) {
-                        modified = statement.replace(new RegExp(from, 'i'), to);
-                        break;
-                    }
+            // Strategy 1: Change a number
+            const numMatch = statement.match(/\b(\d+)\b/);
+            if (numMatch) {
+                const n = parseInt(numMatch[1]);
+                let newNum;
+                if (n <= 2) newNum = n + Math.floor(Math.random() * 5) + 3;
+                else if (n < 10) newNum = n + (Math.random() > 0.5 ? 2 : -2);
+                else newNum = n + Math.floor(Math.random() * 10) + 5;
+                if (newNum < 1) newNum = 2;
+                statement = statement.replace(numMatch[0], String(newNum));
+                if (statement !== fact.fullSentence) return statement.replace(/[.]$/, '');
+            }
+
+            // Strategy 2: Negate
+            const negations = [
+                [/\b(es)\b/, 'no es'], [/\\b(son)\\b/, 'no son'],
+                [/\b(tiene)\b/, 'no tiene'], [/\b(contiene)\b/, 'no contiene'],
+                [/\b(concentra)\b/, 'no concentra'], [/\b(forma)\b/, 'no forma'],
+                [/\b(puede)\b/, 'no puede'], [/\\b(debe)\\b/, 'no debe']
+            ];
+            for (const [pattern, replacement] of negations) {
+                if (pattern.test(statement)) {
+                    return statement.replace(pattern, replacement).replace(/[.]$/, '');
                 }
             }
 
-            return modified;
-        }
-
-        function createMultipleQuestion(sentence, pool, correctIdx) {
-            const text = sentence.text;
-
-            // Extract the key subject and predicate
-            // Pattern: "X es/son/tiene/se..."
-            const match = text.match(/^(.{5,60})\s+(es|son|tiene|se|consta|contiene|concentra|clasific|formo|orbit|mantiene|ejerce|afecta|produce|genera|representa|constituye|pertenece)\s+(.+)/i);
-
-            if (match) {
-                const subject = match[1].trim();
-                const verb = match[2];
-                const predicate = match[3].trim().replace(/[.!?]+$/, '');
-
-                // Question: "Que [verb] [subject]?"
-                const question = `Segun el texto, ${verb} ${subject.toLowerCase()}?`;
-                const correctAnswer = predicate.length > 80 ? predicate.substring(0, 77) + '...' : predicate;
-
-                // Generate distractors from other sentences
-                const distractors = [];
-                for (let j = 0; j < pool.length && distractors.length < 3; j++) {
-                    if (j === correctIdx) continue;
-                    const otherText = pool[j].text;
-                    const otherMatch = otherText.match(/^(?:.{5,60})\s+(?:es|son|tiene|se|consta|contiene|concentra|clasific|formo|orbit|mantiene|ejerce|afecta|produce|genera|representa|constituye|pertenece)\s+(.+)/i);
-                    if (otherMatch) {
-                        let d = otherMatch[1].trim().replace(/[.!?]+$/, '');
-                        if (d.length > 80) d = d.substring(0, 77) + '...';
-                        if (d !== correctAnswer && !distractors.includes(d)) {
-                            distractors.push(d);
-                        }
-                    }
-                }
-
-                while (distractors.length < 3) {
-                    distractors.push('No se especifica en el texto');
-                }
-
-                const options = [correctAnswer, ...distractors.slice(0, 3)].sort(() => Math.random() - 0.5);
-
-                return {
-                    question,
-                    options,
-                    correct: options.indexOf(correctAnswer),
-                    explanation: `Segun el texto: "${text.substring(0, 120)}..."`
-                };
-            }
-
-            // Fallback: use the sentence as context for a simpler question
-            const words = text.split(/\s+/);
-            const subject = words.slice(0, Math.min(4, words.length)).join(' ');
-            const question = `Que afirmacion es correcta sobre "${subject}"?`;
-            const correctAnswer = text.length > 80 ? text.substring(0, 77) + '...' : text;
-
-            const distractors = [];
-            for (let j = 0; j < pool.length && distractors.length < 3; j++) {
-                if (j === correctIdx) continue;
-                let d = pool[j].text;
-                if (d.length > 80) d = d.substring(0, 77) + '...';
-                if (d !== correctAnswer && !distractors.includes(d)) {
-                    distractors.push(d);
+            // Strategy 3: Swap a key word with plausible opposite
+            const swaps = [
+                ['mayor', 'menor'], ['menor', 'mayor'],
+                ['interno', 'externo'], ['externo', 'interno'],
+                ['sol', 'Tierra'], ['Tierra', 'Sol'],
+                ['planetas', 'asteroides'], ['asteroides', 'planetas'],
+                ['gravedad', 'magnetismo'], ['magnetismo', 'fuerza nuclear']
+            ];
+            for (const [from, to] of swaps) {
+                const regex = new RegExp('\\b' + from + '\\b', 'i');
+                if (regex.test(statement)) {
+                    return statement.replace(regex, to).replace(/[.]$/, '');
                 }
             }
-            while (distractors.length < 3) distractors.push('Afirmacion no disponible');
 
-            const options = [correctAnswer, ...distractors.slice(0, 3)].sort(() => Math.random() - 0.5);
-
-            return {
-                question,
-                options,
-                correct: options.indexOf(correctAnswer),
-                explanation: `Informacion basada en el texto.`
-            };
+            // Strategy 4: If nothing worked, just prepend "No es cierto que"
+            return statement.replace(/[.]$/, '');
         }
 
         function renderQuiz() {
