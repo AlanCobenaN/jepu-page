@@ -746,65 +746,77 @@
             if (!q || !q.question || !q.options || q.options.length < 2) return false;
             if (q.correct < 0 || q.correct >= q.options.length) return false;
 
-            const qLower = q.question.trim().toLowerCase();
+            const qText = q.question.trim();
+            const qLower = qText.toLowerCase();
             const isV_F = q.options.length === 2 &&
                 q.options.some(o => /^verdadero$/i.test(o)) &&
                 q.options.some(o => /^falso$/i.test(o));
 
-            // --- CHECK 1: Encabezados / titulos ---
-            const headerPatterns = /\b(introduccion|introducción|conclusion|conclusión|capitulo|capítulo|indice|índice|bibliografia|bibliografía)\b/i;
-            if (headerPatterns.test(q.question)) return false;
+            // --- CHECK 1: Encabezados / titulos en la pregunta ---
+            const headerWords = /\b(introduccion|introducción|conclusion|conclusión|capitulo|capítulo|indice|índice|bibliografia|bibliografía|origenes|orígenes|historia|cultura)\b/i;
+            if (headerWords.test(qText)) return false;
 
-            // --- CHECK 2: Estructuras rotas ---
-            if (/¿qué es su\b/i.test(q.question)) return false;
-            if (/¿qué es se\b/i.test(q.question)) return false;
-            if (/¿qué se menciona sobre es\b/i.test(q.question)) return false;
-            if (/¿qué es\s+\w+\s*:/i.test(q.question)) return false;
-
-            // --- CHECK 3: Pronombres sin referente ---
-            const pronounPatterns = /\b(su|estos|estas|ellos|ellas|aquellos|aquellas)\b/i;
-            // "su" only invalid if followed by noun without entity name before it
-            const hasUnresolvedSu = /(?:^|\s)su\s+(?:atmósfera|campo|masa|composición|eje|órbita|rotación|superficie|interior|formación| temperatura|densidad|gravedad|lunas|anillos|distancia)/i.test(q.question);
-            const hasPronounReferent = /(?:la|el|los|las|del|de la|de los|de las)\s+\w+/i.test(q.question);
-            if (hasUnresolvedSu && !hasPronounReferent) return false;
-
-            // --- CHECK 4: "¿Qué es...?" como plantilla generica ---
-            // Only allow "¿Qué es X?" when X is a single entity name (definition)
-            const queEsMatch = q.question.match(/¿qué es\s+(.+)/i);
+            // --- CHECK 2: "¿Qué es...?" solo para definiciones simples ---
+            const queEsMatch = qText.match(/¿qué es\s+(.+)/i);
             if (queEsMatch) {
-                const afterQueEs = queEsMatch[1].trim();
-                // Allow: "¿Qué es Júpiter?" "¿Qué es el Sol?"
-                // Reject: "¿Qué es su atmósfera?" "¿Qué es se cree que..."
-                // Reject if has pronouns, broken structures, or is too long (not a simple definition)
-                if (/su\b/i.test(afterQueEs)) return false;
-                if (/se\b/i.test(afterQueEs)) return false;
-                if (afterQueEs.length > 40) return false; // too complex for a definition
-                // Must NOT contain ":" (indicates title contamination)
-                if (afterQueEs.includes(':')) return false;
+                const after = queEsMatch[1].trim();
+                // Reject: "¿Qué es su atmósfera?", "¿Qué es se cree...", "¿Qué es aunque..."
+                // Reject if too long, has pronouns, has "se", has common sentence starters
+                if (after.length > 35) return false;
+                if (/\b(su|se|que|aunque|estos|ellos)\b/i.test(after)) return false;
+                if (after.includes(':')) return false;
             }
 
-            // --- CHECK 5: Opciones con "..." o muy cortas ---
+            // --- CHECK 3: "¿Qué tiene/contiene...?" prohibido como plantilla ---
+            if (/¿qué tiene|¿qué contiene/i.test(qText)) return false;
+
+            // --- CHECK 4: Estructuras rotas / fragmentos ---
+            // "¿Qué es se...", "¿Qué es su...", "sobre es..."
+            if (/¿qué es\s+(su|se|aunque|estos|ellos)/i.test(qText)) return false;
+            if (/sobre es\b/i.test(qText)) return false;
+            // Starts with incomplete phrase
+            if (/^(aunque|estos|estas|ellos|ellas|su |que )/i.test(qLower)) return false;
+
+            // --- CHECK 5: Pregunta que contiene fragmento de oracion ---
+            // Check for sentence fragments like "brasil se convirtió en el mayor..."
+            // inside a "¿Qué..." structure
+            if (/¿qué\s+\w+\s+.{20,}/i.test(qText)) {
+                // If question is very long and doesn't end with "?", it's likely a fragment
+                if (!qText.endsWith('¿') && qText.length > 80) return false;
+            }
+
+            // --- CHECK 6: Pronombres sin referente claro ---
+            // "su" followed by noun without "la/el/los/las" before it in the question
+            const badPronouns = /(?:^|[¿?\s,])(su|estos|estas|ellos|ellas)\s+(atmósfera|campo|masa|composición|eje|órbita|rotación|superficie|interior|formación|temperatura|densidad|gravedad|lunas|anillos|distancia|origen|historia|papel)/i;
+            if (badPronouns.test(qText)) {
+                // Check if there's a referent like "la de Jupiter" or "del Sol"
+                if (!/(?:la|el|los|las|del|de la|de los|de las|de)\s+\w+/i.test(qText)) return false;
+            }
+
+            // --- CHECK 7: V/F debe ser afirmacion completa ---
+            if (isV_F) {
+                // Must have subject (El/La/Los/Las/La de...)
+                if (!/^(El|La|Los|Las|La de|El de|Un |Una )/i.test(qText)) return false;
+                // Must not start with verb or "está/están/formado/contiene"
+                if (/^(está|están|está|formado|contiene|tiene|se |fue|es |son )/i.test(qLower)) return false;
+            }
+
+            // --- CHECK 8: Opciones invalidas ---
             for (const opt of q.options) {
-                if (opt && opt.endsWith('...')) return false;
-                if (opt && opt.length < 3) return false;
+                if (!opt || opt.length < 3) return false;
+                if (opt.endsWith('...')) return false;
+                // Títulos como opciones
+                if (/^(introduccion|introducción|capitulo|capítulo|conclusion|conclusión|origenes|orígenes)/i.test(opt.trim())) return false;
             }
 
-            // --- CHECK 6: Titulos como opciones ---
-            const titleOptPatterns = /^(introduccion|introducción|capitulo|capítulo|conclusion|conclusión|indice|índice|bibliografia|bibliografía)/i;
-            for (const opt of q.options) {
-                if (titleOptPatterns.test(opt.trim())) return false;
-            }
+            // --- CHECK 9: Longitud minima ---
+            if (qText.length < 15) return false;
 
-            // --- CHECK 7: Longitud minima ---
-            if (q.question.trim().length < 15) return false;
-
-            // --- CHECK 8: Multiple choice must start with question word ---
+            // --- CHECK 10: Multiple choice debe empezar con palabra interrogativa ---
             if (!isV_F) {
-                const validStarts = ['¿', 'que ', 'qué ', 'cuál', 'cual', 'cuánto', 'cuanto',
-                    'dónde', 'donde', 'cuándo', 'cuando', 'quién', 'quien', 'cómo', 'como',
-                    'según', 'segun', 'de ', 'en ', 'por '];
-                if (!validStarts.some(s => qLower.startsWith(s))) return false;
-                if (!q.question.includes('¿')) return false;
+                if (!qText.startsWith('¿')) return false;
+                const validQ = /¿\s*(qué|que|cuál|cual|cuánto|cuanto|dónde|donde|cuándo|cuando|quién|quien|cómo|como|cuántos|cuantos|cuántas|cuantas)/i;
+                if (!validQ.test(qText)) return false;
             }
 
             return true;
@@ -1037,9 +1049,11 @@ Para preguntas de Verdadero/Falso, puedes modificar la oracion para convertirla 
 
 Antes de mostrar una pregunta, compara todos sus datos con el texto original. Si algun numero, nombre o dato no coincide, descarta y regenera la pregunta.
 
-Para V/F: La afirmacion debe ser completa, independiente y comprensible sola. Incluye siempre el sujeto y contexto necesario.
+Para V/F: La afirmacion debe ser completa, independiente y comprensible sola. Incluye SIEMPRE el sujeto explicito (nunca uses "su", "estos", "ellos" sin referente). Reemplaza siempre el pronombre por la entidad.
   ❌ "Esta formado por roca y metal."
   ✅ "Los planetas rocosos del Sistema Solar estan formados por roca y metal."
+  ❌ "Su atmosfera esta dominada por hidrogeno y helio"
+  ✅ "La atmosfera de Jupiter esta dominada por hidrogeno y helio"
 
 ${typeLine}
 
