@@ -882,17 +882,21 @@ ${content.substring(0, 14000)}
 
 REGLAS DE GENERACION:
 
-1. NUNCA copies directamente la oracion original como pregunta. Debes TRANSFORMAR la informacion en una pregunta completa.
-   - MAL: "El Sol concentra más del 99% de la masa total del sistema y ejerce, mediante su gravedad, el control orbital de todos los demás cuerpos."
-   - BIEN: "¿Qué porcentaje de la masa total del Sistema Solar concentra el Sol?"
+1. NO construyas la pregunta modificando directamente la oracion original. Primero identifica el SUJETO, el OBJETO y la INFORMACION PRINCIPAL de la oracion. Despues genera una pregunta NUEVA y gramatical basada en esa informacion. La pregunta debe poder entenderse por si sola.
+   - MAL: "¿Qué es se cree que la formó hace aproximadamente 4.600 millones de años?"
+   - MAL: "¿Qué se menciona sobre es una estrella de tipo espectral G2V?"
+   - BIEN: "¿Cuándo se formó el Sistema Solar?"
+   - BIEN: "¿Qué tipo de estrella es el Sol?"
+   - NUNCA conserves estructuras incompletas como "¿Qué es se cree...?" o "¿Qué se menciona sobre es...?"
 
-2. ELIMINA siempre titulos, subtitulos y palabras como "Introduccion", "Capitulo", "Conclusion" antes de generar la pregunta. NUNCA hagas preguntas sobre el titulo del documento ni sobre la estructura del texto.
+2. ELIMINA siempre encabezados como "Introduccion", "Los Gigantes Gaseosos y de Hielo", "Capitulo", "Conclusion" antes de generar la pregunta. Los titulos y encabezados NUNCA deben formar parte de una pregunta ni de sus opciones.
 
 3. Si la oracion utiliza pronombres o referencias sin contexto como "su", "estos", "esta", "ellos" o "aquellos", REEMPLAZALOS por el nombre del sujeto correspondiente para que la pregunta pueda entenderse por si sola. NUNCA utilices pronombres como "su", "estos", "estos objetos" sin especificar claramente a que entidad se refieren.
    - MAL: "¿Qué tiene su atmósfera?"
    - BIEN: "¿Qué tiene la atmósfera de la Tierra?"
    - MAL: "¿Cómo se formaron estos?"
    - BIEN: "¿Cómo se formaron los planetas rocosos?"
+   - Si NO puedes determinar con claridad que entidad describe el fragmento, NO generes una pregunta con pronombres. Identifica la entidad explicitamente en el texto o DESCARTA esa pregunta y genera otra.
 
 4. La pregunta debe preguntar EXACTAMENTE por el tipo de informacion presente en la respuesta correcta. Analiza primero que describe la respuesta y luego formula la pregunta acorde:
    - Si la respuesta describe una CARACTERISTICA → pregunta "¿Qué característica tiene...?" o "¿Cómo es...?"
@@ -912,6 +916,8 @@ REGLAS DE GENERACION:
    - V/F: Debe ser una AFIRMACION completa, independiente y comprensible sin necesidad de leer el texto original. Incluye siempre el sujeto y contexto necesario.
    - MAL V/F: "Está formado por roca y metal." (¿Que esta formado?)
    - BIEN V/F: "Los planetas rocosos del Sistema Solar están formados por roca y metal."
+
+6. Si una pregunta contiene ERRORES GRAMATICALES, PALABRAS REPETIDAS, PALABRAS SOBRANTES o una estructura como "¿Qué es + [oracion completa]?", considerala INVALIDA y regenerala. Verifica cada pregunta antes de incluirla en el JSON.
 
 6. NUNCA generes preguntas con palabras sueltas o fragmentos rotos como "Segun el texto, se aun mas lejos?" Debe ser "¿Qué se encuentra mas alla del Sistema Solar?"
 
