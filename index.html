@@ -401,7 +401,7 @@
         let currentPage = 1;
         let totalPages = 0;
         let allPageData = {};
-        let apiKey = localStorage.getItem('gemini_api_key') || 'AIzaSyBIHCO5RhEv6VeoOZERi3ynvvet1hEuS5A';
+        let apiKey = localStorage.getItem('gemini_api_key') || '';
         let quizQuestions = [];
 
         const uploadZone = document.getElementById('upload-zone');
@@ -422,6 +422,12 @@
         async function loadImages(files) {
             const imageFiles = files.filter(f => f.type.startsWith('image/'));
             if (imageFiles.length === 0) { notify('Selecciona archivos de imagen'); return; }
+
+            if (!apiKey) {
+                notify('Configura tu API key primero (boton "API Key" arriba)');
+                openConfig();
+                return;
+            }
 
             images = imageFiles;
             totalPages = images.length;
@@ -552,7 +558,7 @@
         function showExtractedText(num) {
             const data = allPageData[num];
             if (!data || data.paragraphs.length === 0) {
-                extractedTextEl.innerHTML = '<p style="color:var(--text-light);">Esta imagen no tiene texto legible o hubo un error de IA.<br><small>Revisa la API Key (boton "API Key" arriba) y que la foto este enfocada.</small></p>';
+                extractedTextEl.innerHTML = '<p style="color:var(--text-light);">No se pudo extraer texto de esta imagen, o no hay API key configurada.<br><small>Pulsa el boton "API Key" arriba a la derecha y pega tu clave de Google AI Studio.</small></p>';
                 extractedTextEl.classList.remove('hidden');
                 return;
             }
