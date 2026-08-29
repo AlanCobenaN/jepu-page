@@ -64,6 +64,9 @@
         .upload-zone h3 { color: var(--primary-light); margin-bottom: 0.5rem; }
         .upload-zone p { color: var(--text-light); font-size: 0.9rem; }
         .upload-zone input { display: none; }
+        .upload-zone.audio { margin-top: 0; border-color: #3a3a5a; background: #15151f; }
+        .upload-zone.audio h3 { color: #a5b4fc; }
+        .upload-zone.audio:hover, .upload-zone.audio.dragover { border-color: #6366f1; background: #1c1c2a; }
 
         .tabs {
             display: flex; gap: 0.4rem; margin-bottom: 1rem;
@@ -303,6 +306,13 @@
             <input type="file" id="file-input" accept="image/*" multiple>
         </div>
 
+        <div class="upload-zone audio" id="upload-zone-audio" onclick="document.getElementById('audio-input').click()">
+            <div class="icon">&#127908;</div>
+            <h3>O sube audios para pasar a texto</h3>
+            <p>Arrastra audios aqui o haz clic para seleccionar (mp3, wav, m4a, ogg)</p>
+            <input type="file" id="audio-input" accept="audio/*" multiple>
+        </div>
+
         <div class="tabs hidden" id="main-tabs">
             <button class="tab active" data-tab="reader" onclick="switchTab('reader')">Lector de Voz</button>
             <button class="tab" data-tab="quiz" onclick="switchTab('quiz')">Generar Preguntas</button>
@@ -408,6 +418,8 @@
         const fileInput = document.getElementById('file-input');
         const imageContainer = document.getElementById('image-container');
         const extractedTextEl = document.getElementById('extracted-text');
+        const uploadZoneAudio = document.getElementById('upload-zone-audio');
+        const audioInput = document.getElementById('audio-input');
 
         updateApiStatus();
 
@@ -418,6 +430,96 @@
             e.preventDefault(); uploadZone.classList.remove('dragover');
             if (e.dataTransfer.files.length > 0) loadImages(Array.from(e.dataTransfer.files));
         });
+
+        audioInput.addEventListener('change', e => { if (e.target.files.length > 0) loadAudios(Array.from(e.target.files)); });
+        uploadZoneAudio.addEventListener('dragover', e => { e.preventDefault(); uploadZoneAudio.classList.add('dragover'); });
+        uploadZoneAudio.addEventListener('dragleave', () => uploadZoneAudio.classList.remove('dragover'));
+        uploadZoneAudio.addEventListener('drop', e => {
+            e.preventDefault(); uploadZoneAudio.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) loadAudios(Array.from(e.dataTransfer.files));
+        });
+
+        async function loadAudios(files) {
+            const audioFiles = files.filter(f => f.type.startsWith('audio/'));
+            if (audioFiles.length === 0) { notify('Selecciona archivos de audio'); return; }
+            if (!apiKey) { notify('Configura tu API key primero (boton "API Key" arriba)'); openConfig(); return; }
+
+            document.getElementById('main-tabs').classList.remove('hidden');
+            document.getElementById('upload-zone').innerHTML = `<div class="icon">&#9989;</div><h3>Audio(s) cargado(s)</h3><p>${audioFiles.length} audio(s) listos</p>`;
+            document.getElementById('upload-zone').style.cursor = 'default';
+            document.getElementById('upload-zone').onclick = null;
+
+            uploadZoneAudio.innerHTML = `<div class="icon">&#8987;</div><h3>Transcribiendo audio con IA...</h3><p>Procesando ${audioFiles.length} audio(s), esto puede tardar</p>`;
+            uploadZoneAudio.style.cursor = 'default';
+            uploadZoneAudio.onclick = null;
+
+            let allTranscribed = [];
+            for (let i = 0; i < audioFiles.length; i++) {
+                const text = await transcribeAudio(audioFiles[i]);
+                if (text && text.trim()) allTranscribed.push(text.trim());
+                uploadZoneAudio.querySelector('p').textContent = `Transcritos ${i + 1}/${audioFiles.length}...`;
+            }
+
+            // Split into paragraphs and build allPageData
+            allPageData = {};
+            const paragraphs = [];
+            for (const t of allTranscribed) {
+                paragraphs.push(...t.split(/\n\s*\n/).filter(p => p.trim().length > 0));
+            }
+
+            // Put transcription in page 1 so reader & quiz can use it
+            allPageData[1] = { paragraphs, cleanText: paragraphs.join('\n\n'), rawText: allTranscribed.join('\n\n') };
+            totalPages = 1;
+            currentPage = 1;
+            document.getElementById('total-pages').textContent = 1;
+            document.getElementById('page-input').max = 1;
+            document.getElementById('page-input').value = 1;
+            imageContainer.innerHTML = '';
+            document.getElementById('btn-prev').disabled = true;
+            document.getElementById('btn-next').disabled = true;
+
+            showExtractedText(1);
+            uploadZoneAudio.innerHTML = `<div class="icon">&#9989;</div><h3>Transcripcion lista</h3><p>${allTranscribed.length} audio(s) convertidos a texto</p>`;
+            notify('Audio transcrito a texto');
+        }
+
+        async function transcribeAudio(file) {
+            try {
+                const b64 = await fileToBase64(file);
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: "Transcribe este audio de forma literal y completa al español. Mantén párrafos y la puntuación correcta. Separa cada idea o párrafo con un salto de línea doble. Responde SOLO con la transcripción, sin comentarios ni notas." },
+                                { inline_data: { mime_type: file.type, data: b64 } }
+                            ]
+                        }],
+                        generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
+                    })
+                });
+                if (!response.ok) {
+                    const errBody = await response.text();
+                    throw new Error(`Gemini API error ${response.status}: ${errBody}`);
+                }
+                const data = await response.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+            } catch (err) {
+                console.error('Error transcribing audio:', err);
+                notify('Error transcribiendo audio: ' + (err.message || 'desconocido'));
+                throw err;
+            }
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
 
         async function loadImages(files) {
             const imageFiles = files.filter(f => f.type.startsWith('image/'));
