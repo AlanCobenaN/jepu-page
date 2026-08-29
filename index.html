@@ -192,6 +192,9 @@
             border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem;
         }
         .question-card:hover { border-color: var(--primary-dark); }
+        .question-card.q-wrong { border-color: #ef4444; background: rgba(239,68,68,0.06); }
+        .question-card.q-wrong .q-number { background: #dc2626; }
+        .question-card.q-right .q-number { background: #16a34a; }
         .question-card .q-header {
             display: flex; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.75rem;
         }
@@ -1416,7 +1419,7 @@ IMPORTANTE: Responde SOLO con el JSON. Sin markdown, sin backticks, sin texto an
                     <div class="options">
                         ${q.options.map((opt, j) => `
                             <div class="option" data-q="${i}" data-opt="${j}" onclick="selectOption(this, ${i}, ${j})">
-                                <input type="radio" name="q${i}" id="q${i}o${j}">
+                                <input type="radio" name="q${i}" id="q${i}o${j}" value="${j}">
                                 <span><strong>${String.fromCharCode(65 + j)}.</strong> ${esc(opt)}</span>
                             </div>
                         `).join('')}
@@ -1439,7 +1442,9 @@ IMPORTANTE: Responde SOLO con el JSON. Sin markdown, sin backticks, sin texto an
             let correct = 0;
             quizQuestions.forEach((q, i) => {
                 const options = document.querySelectorAll(`[data-q="${i}"]`);
+                const card = document.querySelectorAll('.question-card')[i];
                 const selected = document.querySelector(`input[name="q${i}"]:checked`);
+                const selectedIdx = selected ? parseInt(selected.value) : -1;
 
                 options.forEach((opt, j) => {
                     opt.classList.remove('selected', 'correct', 'incorrect');
@@ -1448,13 +1453,18 @@ IMPORTANTE: Responde SOLO con el JSON. Sin markdown, sin backticks, sin texto an
                     if (j === q.correct) {
                         // Always mark the correct answer green
                         opt.classList.add('correct');
-                    } else if (selected && parseInt(opt.dataset.opt) === parseInt(selected.value)) {
+                    } else if (selectedIdx === j) {
                         // Mark the wrong selected answer red
                         opt.classList.add('incorrect');
                     }
                 });
 
-                if (selected && parseInt(selected.value) === q.correct) correct++;
+                if (selectedIdx === q.correct) {
+                    correct++;
+                    if (card) { card.classList.remove('q-wrong'); card.classList.add('q-right'); }
+                } else {
+                    if (card) { card.classList.remove('q-right'); card.classList.add('q-wrong'); }
+                }
                 document.getElementById(`exp-${i}`).classList.add('show');
             });
 
